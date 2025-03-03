@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NFT Portfolio Tracker",
+  title: "nftportfolio.app",
   description: "Track your NFT portfolio value and collections",
 };
 
