@@ -3,20 +3,27 @@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 
 interface LandingPageProps {
   address: string;
   setAddress: (address: string) => void;
-  onSearch: () => void;
   onConnectMetamask: () => Promise<void>;
 }
 
 export default function LandingPage({ 
   address, 
   setAddress, 
-  onSearch, 
   onConnectMetamask 
 }: LandingPageProps) {
+  const router = useRouter();
+
+  const handleSearch = () => {
+    if (address.trim()) {
+      router.push(`/address?id=${address.trim()}`);
+    }
+  }
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4">
       <h1 className="text-4xl font-bold mb-2">nftportfolio.app</h1>
@@ -29,11 +36,12 @@ export default function LandingPage({
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             className="w-full"
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
           <Button 
             variant="ghost" 
             className="absolute right-2 top-1/2 -translate-y-1/2"
-            onClick={onSearch}
+            onClick={handleSearch}
           >
             →
           </Button>
