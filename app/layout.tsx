@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle"
 import CurrencySelector from "@/components/CurrencySelector"
+import { UserProvider } from "@/context/UserContext";
+import UserHeader from "@/components/UserHeader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,16 +22,6 @@ export const metadata: Metadata = {
   description: "Track your NFT portfolio value and collections",
 };
 
-import ProfileMenu from "@/components/ProfileMenu"
-
-// Mock user data - you can replace this with real user data later
-const user = {
-  name: "Pranksy",
-  ethHandle: "pranksy.eth",
-  ethAddress: "0x1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0",
-  avatar: "https://placehold.co/400"
-}
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -44,12 +36,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="absolute top-4 right-4 flex items-center gap-2">
-            <CurrencySelector />
-            <ThemeToggle />
-            <ProfileMenu user={user} />
-          </div>
-          {children}
+          <UserProvider>
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+              <CurrencySelector />
+              <ThemeToggle />
+              <UserHeader />
+            </div>
+            {children}
+          </UserProvider>
         </ThemeProvider>
       </body>
     </html>
