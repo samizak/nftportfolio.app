@@ -15,7 +15,6 @@ export default function AddressPage() {
 
   return (
     <PortfolioView 
-    onBack={() =>null}
     user={user}
   />
   )

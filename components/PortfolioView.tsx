@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { useState } from "react"
 
 interface PortfolioViewProps {
-  onBack: () => void;
   user: {
     name: string;
     ethHandle: string;
