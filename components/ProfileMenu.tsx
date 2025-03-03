@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 interface ProfileMenuProps {
   user: {
@@ -18,10 +19,16 @@ interface ProfileMenuProps {
     ethAddress: string;
     avatar: string,
   },
-  onLogout?: () => void;
 }
 
-export default function ProfileMenu({ user, onLogout }: ProfileMenuProps) {
+export default function ProfileMenu({ user }: ProfileMenuProps) {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    // Add any logout logic here (clear tokens, etc.)
+    router.push('/');
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -41,11 +48,10 @@ export default function ProfileMenu({ user, onLogout }: ProfileMenuProps) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-red-500 cursor-pointer" onClick={()=>
-                    {
-                      console.log("TEST");
-                      onLogout?.();
-                    }}>
+        <DropdownMenuItem 
+          className="text-red-500 cursor-pointer"
+          onClick={handleLogout}
+        >
           Logout
         </DropdownMenuItem>
       </DropdownMenuContent>
