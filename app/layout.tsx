@@ -7,6 +7,7 @@ import CurrencySelector from "@/components/CurrencySelector";
 import { UserProvider } from "@/context/UserContext";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import UserHeader from "@/components/UserHeader";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,9 +49,8 @@ export default function RootLayout({
                 <ThemeToggle />
                 <UserHeader />
               </div>
-              <div className="pt-16">
-                {children}
-              </div>
+              <div className="pt-16">{children}</div>
+              <Toaster position="top-right" />
             </CurrencyProvider>
           </UserProvider>
         </ThemeProvider>

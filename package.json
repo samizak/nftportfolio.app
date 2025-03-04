@@ -23,6 +23,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-window": "^1.8.11",
+    "sonner": "^2.0.1",
     "swr": "^2.3.2",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7"
