@@ -9,6 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { formatDollarValue, formatThousandSeparator } from "@/utils/formatters";
 
 interface PortfolioStatsProps {
   data?: any[];
@@ -52,11 +53,6 @@ export default function PortfolioStats({
     setBiggestHolding(biggest);
   }, [data, totalValue]);
 
-  // Format dollar value with commas
-  const formatDollarValue = (value: number) => {
-    return new Intl.NumberFormat("en-US").format(Math.round(value));
-  };
-
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <Card>
@@ -79,9 +75,11 @@ export default function PortfolioStats({
           <CardTitle className="text-sm font-medium">Total NFTs</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{totalNfts}</div>
+          <div className="text-2xl font-bold">
+            {formatThousandSeparator(totalNfts)}
+          </div>
           <p className="text-xs text-muted-foreground">
-            Across {data.length} collections
+            Across {formatThousandSeparator(data.length)} collections
           </p>
         </CardContent>
       </Card>
@@ -128,10 +126,15 @@ export default function PortfolioStats({
                 )}
               </div>
               <div className="text-lg text-muted-foreground">
-                Ξ {((biggestHolding?.quantity || 0) * (biggestHolding?.floor_price || 0)).toFixed(2)}
+                Ξ{" "}
+                {(
+                  (biggestHolding?.quantity || 0) *
+                  (biggestHolding?.floor_price || 0)
+                ).toFixed(2)}
               </div>
               <p className="text-xs text-muted-foreground">
-                {biggestHolding?.quantity || 0} items at Ξ {biggestHolding?.floor_price?.toFixed(4) || "0.0000"} floor
+                {formatThousandSeparator(biggestHolding?.quantity || 0)} items
+                at Ξ {biggestHolding?.floor_price?.toFixed(4) || "0.0000"} floor
               </p>
             </div>
           </div>

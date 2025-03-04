@@ -16,6 +16,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ChevronUpIcon, ChevronDownIcon } from "@radix-ui/react-icons";
+import { formatThousandSeparator } from "@/utils/formatters";
 
 interface NFTPortfolioTableProps {
   searchQuery: string;
@@ -215,7 +216,9 @@ export default function NFTPortfolioTable({
                 )}
               </div>
             </TableCell>
-            <TableCell className="text-right">{item.quantity}</TableCell>
+            <TableCell className="text-right">
+              {formatThousandSeparator(item.quantity)}
+            </TableCell>
             <TableCell className="text-right">
               Ξ {item.floor_price?.toFixed(4) || "0.0000"}
             </TableCell>
