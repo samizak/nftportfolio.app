@@ -16,6 +16,7 @@ interface PortfolioStatsProps {
   ethPrice?: number;
   totalNfts?: number;
   totalValue?: number;
+  selectedCurrency?: { code: string; symbol: string };
 }
 
 interface CollectionData {
@@ -33,6 +34,7 @@ export default function PortfolioStats({
   ethPrice = 0,
   totalNfts = 0,
   totalValue = 0,
+  selectedCurrency = { code: "USD", symbol: "$" },
 }: PortfolioStatsProps) {
   const [biggestHolding, setBiggestHolding] = useState<CollectionData>();
 
@@ -60,9 +62,11 @@ export default function PortfolioStats({
           <CardTitle className="text-sm font-medium">Total Value</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">Ξ {totalValue.toFixed(2)}</div>
+          <div className="text-2xl font-bold">
+            Ξ {formatThousandSeparator(+totalValue.toFixed(2))}
+          </div>
           <div className="text-2xl text-muted-foreground">
-            $ {formatDollarValue(totalValue * ethPrice)}
+            {selectedCurrency.symbol} {formatDollarValue(totalValue * ethPrice)}
           </div>
           <p className="text-xs text-muted-foreground">
             Based on current floor prices
@@ -127,10 +131,12 @@ export default function PortfolioStats({
               </div>
               <div className="text-lg text-muted-foreground">
                 Ξ{" "}
-                {(
-                  (biggestHolding?.quantity || 0) *
-                  (biggestHolding?.floor_price || 0)
-                ).toFixed(2)}
+                {formatThousandSeparator(
+                  +(
+                    (biggestHolding?.quantity || 0) *
+                    (biggestHolding?.floor_price || 0)
+                  ).toFixed(2)
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
                 {formatThousandSeparator(biggestHolding?.quantity || 0)} items

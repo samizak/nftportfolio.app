@@ -18,6 +18,7 @@ interface PortfolioViewProps {
   ethPrice?: number;
   totalNfts?: number;
   totalValue?: number;
+  selectedCurrency?: { code: string; symbol: string };
 }
 
 export default function PortfolioView({
@@ -26,6 +27,7 @@ export default function PortfolioView({
   ethPrice = 0,
   totalNfts = 0,
   totalValue = 0,
+  selectedCurrency = { code: "USD", symbol: "$" },
 }: PortfolioViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -42,6 +44,7 @@ export default function PortfolioView({
         ethPrice={ethPrice}
         totalNfts={totalNfts}
         totalValue={totalValue}
+        selectedCurrency={selectedCurrency}
       />
 
       <div className="mt-8">
@@ -58,9 +61,11 @@ export default function PortfolioView({
           </CardHeader>
           <CardContent>
             <NFTPortfolioTable
-              searchQuery={searchQuery}
               data={data}
+              searchQuery={searchQuery}
               totalValue={totalValue}
+              ethPrice={ethPrice}
+              selectedCurrency={selectedCurrency}
             />
           </CardContent>
         </Card>

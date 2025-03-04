@@ -16,12 +16,28 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ChevronUpIcon, ChevronDownIcon } from "@radix-ui/react-icons";
+import { Button } from "@/components/ui/button";
 import { formatThousandSeparator } from "@/utils/formatters";
+
+// Add this utility function to format dollar values
+const formatDollarValue = (
+  ethValue: number,
+  ethPrice: number,
+  currency: string
+): string => {
+  const dollarValue = ethValue * ethPrice;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency,
+  }).format(dollarValue);
+};
 
 interface NFTPortfolioTableProps {
   searchQuery: string;
   data?: any[];
   totalValue?: number;
+  ethPrice?: number;
+  selectedCurrency?: { code: string; symbol: string };
 }
 
 type SortColumn =
@@ -36,9 +52,13 @@ export default function NFTPortfolioTable({
   searchQuery,
   data = [],
   totalValue = 0,
+  ethPrice = 0,
+  selectedCurrency = { code: "USD", symbol: "$" },
 }: NFTPortfolioTableProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>("percentage");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
 
   const handleSort = (column: SortColumn) => {
     if (column === sortColumn) {
@@ -48,11 +68,10 @@ export default function NFTPortfolioTable({
       setSortDirection("desc");
     }
   };
-
   const filteredData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    return data
+    const filtered = data
       .filter(
         (item) =>
           item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -72,7 +91,14 @@ export default function NFTPortfolioTable({
           ? (a[sortColumn] || 0) - (b[sortColumn] || 0)
           : (b[sortColumn] || 0) - (a[sortColumn] || 0);
       });
-  }, [data, searchQuery, totalValue, sortColumn, sortDirection]);
+
+    // Calculate pagination
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }, [data, searchQuery, totalValue, sortColumn, sortDirection, currentPage]);
+
+  const totalPages = Math.ceil((data?.length || 0) / itemsPerPage);
 
   if (filteredData.length === 0) {
     return (
@@ -86,151 +112,199 @@ export default function NFTPortfolioTable({
       </div>
     );
   }
-
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead
-            onClick={() => handleSort("name")}
-            className="cursor-pointer"
-          >
-            <div className="flex items-center">
-              Collection
-              {sortColumn === "name" && (
-                <span className="ml-1">
-                  {sortDirection === "asc" ? (
-                    <ChevronUpIcon />
-                  ) : (
-                    <ChevronDownIcon />
-                  )}
-                </span>
-              )}
-            </div>
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("quantity")}
-            className="text-right cursor-pointer"
-          >
-            <div className="flex items-center justify-end">
-              Quantity
-              {sortColumn === "quantity" && (
-                <span className="ml-1">
-                  {sortDirection === "asc" ? (
-                    <ChevronUpIcon />
-                  ) : (
-                    <ChevronDownIcon />
-                  )}
-                </span>
-              )}
-            </div>
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("floor_price")}
-            className="text-right cursor-pointer"
-          >
-            <div className="flex items-center justify-end">
-              Floor Price
-              {sortColumn === "floor_price" && (
-                <span className="ml-1">
-                  {sortDirection === "asc" ? (
-                    <ChevronUpIcon />
-                  ) : (
-                    <ChevronDownIcon />
-                  )}
-                </span>
-              )}
-            </div>
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("total_value")}
-            className="text-right cursor-pointer"
-          >
-            <div className="flex items-center justify-end">
-              Value (Ξ)
-              {sortColumn === "total_value" && (
-                <span className="ml-1">
-                  {sortDirection === "asc" ? (
-                    <ChevronUpIcon />
-                  ) : (
-                    <ChevronDownIcon />
-                  )}
-                </span>
-              )}
-            </div>
-          </TableHead>
-          <TableHead
-            onClick={() => handleSort("percentage")}
-            className="text-right cursor-pointer"
-          >
-            <div className="flex items-center justify-end">
-              Portfolio (%)
-              {sortColumn === "percentage" && (
-                <span className="ml-1">
-                  {sortDirection === "asc" ? (
-                    <ChevronUpIcon />
-                  ) : (
-                    <ChevronDownIcon />
-                  )}
-                </span>
-              )}
-            </div>
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {filteredData.map((item) => (
-          <TableRow key={item.collection}>
-            <TableCell className="flex items-center gap-2">
-              <Avatar className="h-10 w-10 flex-shrink-0">
-                <img
-                  src={item.image_url || "https://placehold.co/100?text=NFT"}
-                  alt={item.name || "Collection"}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src =
-                      "https://placehold.co/100?text=NFT";
-                  }}
-                />
-              </Avatar>
-              <div className="flex gap-2 items-center">
-                <div className="font-medium">
-                  {item.name || "Unknown Collection"}
-                </div>
-                {item.is_verified && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Image
-                          className="inline-block cursor-pointer"
-                          src="/verified_checkmark.svg"
-                          alt="verified"
-                          width={14}
-                          height={14}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>This collection is verified</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+    <div className="space-y-4">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead
+              onClick={() => handleSort("name")}
+              className="cursor-pointer"
+            >
+              <div className="flex items-center">
+                Collection
+                {sortColumn === "name" && (
+                  <span className="ml-1">
+                    {sortDirection === "asc" ? (
+                      <ChevronUpIcon />
+                    ) : (
+                      <ChevronDownIcon />
+                    )}
+                  </span>
                 )}
               </div>
-            </TableCell>
-            <TableCell className="text-right">
-              {formatThousandSeparator(item.quantity)}
-            </TableCell>
-            <TableCell className="text-right">
-              Ξ {item.floor_price?.toFixed(4) || "0.0000"}
-            </TableCell>
-            <TableCell className="text-right">
-              Ξ {item.total_value?.toFixed(2) || "0.00"}
-            </TableCell>
-            <TableCell className="text-right">
-              {item.percentage?.toFixed(1) || "0.0"}%
-            </TableCell>
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("quantity")}
+              className="text-right cursor-pointer"
+            >
+              <div className="flex items-center justify-end">
+                Quantity
+                {sortColumn === "quantity" && (
+                  <span className="ml-1">
+                    {sortDirection === "asc" ? (
+                      <ChevronUpIcon />
+                    ) : (
+                      <ChevronDownIcon />
+                    )}
+                  </span>
+                )}
+              </div>
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("floor_price")}
+              className="text-right cursor-pointer"
+            >
+              <div className="flex items-center justify-end">
+                Floor Price
+                {sortColumn === "floor_price" && (
+                  <span className="ml-1">
+                    {sortDirection === "asc" ? (
+                      <ChevronUpIcon />
+                    ) : (
+                      <ChevronDownIcon />
+                    )}
+                  </span>
+                )}
+              </div>
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("total_value")}
+              className="text-right cursor-pointer"
+            >
+              <div className="flex items-center justify-end">
+                Value (Ξ)
+                {sortColumn === "total_value" && (
+                  <span className="ml-1">
+                    {sortDirection === "asc" ? (
+                      <ChevronUpIcon />
+                    ) : (
+                      <ChevronDownIcon />
+                    )}
+                  </span>
+                )}
+              </div>
+            </TableHead>
+            <TableHead
+              onClick={() => handleSort("percentage")}
+              className="text-right cursor-pointer"
+            >
+              <div className="flex items-center justify-end">
+                Portfolio (%)
+                {sortColumn === "percentage" && (
+                  <span className="ml-1">
+                    {sortDirection === "asc" ? (
+                      <ChevronUpIcon />
+                    ) : (
+                      <ChevronDownIcon />
+                    )}
+                  </span>
+                )}
+              </div>
+            </TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {filteredData.map((item) => (
+            <TableRow key={item.collection}>
+              <TableCell className="flex items-center gap-2">
+                <Avatar className="h-10 w-10 flex-shrink-0">
+                  <img
+                    src={item.image_url || "https://placehold.co/100?text=NFT"}
+                    alt={item.name || "Collection"}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "https://placehold.co/100?text=NFT";
+                    }}
+                  />
+                </Avatar>
+                <div className="flex gap-2 items-center">
+                  <div className="font-medium">
+                    {item.name || "Unknown Collection"}
+                  </div>
+                  {item.is_verified && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Image
+                            className="inline-block cursor-pointer"
+                            src="/verified_checkmark.svg"
+                            alt="verified"
+                            width={14}
+                            height={14}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>This collection is verified</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="text-right">
+                {formatThousandSeparator(item.quantity)}
+              </TableCell>
+              <TableCell className="text-right">
+                <div>
+                  Ξ {item.floor_price?.toFixed(4) || "0.0000"}
+                  {ethPrice > 0 && item.floor_price > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      {formatDollarValue(
+                        item.floor_price,
+                        ethPrice,
+                        selectedCurrency.code
+                      )}
+                    </div>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="text-right">
+                <div>
+                  Ξ {item.total_value?.toFixed(2) || "0.00"}
+                  {ethPrice > 0 && item.total_value > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      {formatDollarValue(
+                        item.total_value,
+                        ethPrice,
+                        selectedCurrency.code
+                      )}
+                    </div>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="text-right">
+                {item.percentage?.toFixed(1) || "0.0"}%
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 py-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

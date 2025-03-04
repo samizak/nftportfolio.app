@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import CurrencySelector from "@/components/CurrencySelector";
 import { UserProvider } from "@/context/UserContext";
+import { CurrencyProvider } from "@/context/CurrencyContext";
 import UserHeader from "@/components/UserHeader";
 
 const geistSans = Geist({
@@ -39,12 +40,18 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <UserProvider>
-            <div className="absolute top-4 right-4 flex items-center gap-2">
-              <CurrencySelector />
-              <ThemeToggle />
-              <UserHeader />
-            </div>
-            {children}
+            <CurrencyProvider>
+              <div className="fixed top-4 right-4 flex items-center gap-4 z-50">
+                <div className="mr-2">
+                  <CurrencySelector />
+                </div>
+                <ThemeToggle />
+                <UserHeader />
+              </div>
+              <div className="pt-16">
+                {children}
+              </div>
+            </CurrencyProvider>
           </UserProvider>
         </ThemeProvider>
       </body>

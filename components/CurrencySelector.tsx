@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useCurrency } from "@/context/CurrencyContext";
 
 const currencies = [
   { code: "USD", symbol: "$" },
@@ -17,13 +17,10 @@ const currencies = [
   { code: "AUD", symbol: "A$" },
   { code: "CAD", symbol: "C$" },
   { code: "CNY", symbol: "CN¥" },
-  { code: "CHF", symbol: "CHF" },
-  { code: "HKD", symbol: "HK$" },
-  { code: "SGD", symbol: "S$" },
 ];
 
 export default function CurrencySelector() {
-  const [selectedCurrency, setSelectedCurrency] = useState(currencies[0]);
+  const { selectedCurrency, setSelectedCurrency } = useCurrency();
 
   return (
     <DropdownMenu>
