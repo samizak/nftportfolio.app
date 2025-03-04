@@ -100,6 +100,21 @@ export default function NFTPortfolioTable({
 
   const totalPages = Math.ceil((data?.length || 0) / itemsPerPage);
 
+  // Check if there's no data initially
+  if (data.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <p className="text-muted-foreground mb-2">
+          No NFTs found in this portfolio
+        </p>
+        <p className="text-sm text-muted-foreground">
+          This wallet doesn't appear to have any NFT collections
+        </p>
+      </div>
+    );
+  }
+
+  // Check if there are no results after filtering
   if (filteredData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -112,6 +127,7 @@ export default function NFTPortfolioTable({
       </div>
     );
   }
+
   return (
     <div className="space-y-4">
       <div className="overflow-x-auto">
