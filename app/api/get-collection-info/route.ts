@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { MongoClient } from "mongodb";
 
 export async function GET(req: any, res: any) {
   const { searchParams } = new URL(req.url);
@@ -11,9 +12,26 @@ export async function GET(req: any, res: any) {
     );
   }
 
-  const openseaUrl = `https://api.opensea.io/api/v2/collections/${slug}`;
-
   try {
+    // Connect to MongoDB
+    const client = new MongoClient(process.env.MONGODB_URI || "");
+    await client.connect();
+    const database = client.db("nft-portfolio");
+    const collections = database.collection("collections");
+
+    // Check if collection exists in MongoDB and is less than 7 days old
+    const existingCollection = await collections.findOne({ collection: slug });
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    // If collection exists and data is fresh (less than 7 days old), return it
+    if (existingCollection && existingCollection.timestamp > sevenDaysAgo) {
+      await client.close();
+      return NextResponse.json(existingCollection);
+    }
+
+    // Otherwise, fetch from OpenSea API
+    const openseaUrl = `https://api.opensea.io/api/v2/collections/${slug}`;
     const response = await fetch(openseaUrl, {
       method: "GET",
       headers: {
@@ -23,6 +41,7 @@ export async function GET(req: any, res: any) {
     });
 
     if (!response.ok) {
+      await client.close();
       return NextResponse.json(
         { error: "Error fetching data from OpenSea" },
         { status: response.status }
@@ -30,17 +49,26 @@ export async function GET(req: any, res: any) {
     }
 
     const data = await response.json();
-    const res = {
+    const collectionData = {
       collection: data.collection,
       name: data.name,
       description: data.description,
       image_url: data.image_url,
       safelist_status: data.safelist_status,
+      timestamp: new Date(),
     };
 
-    console.log(res);
+    // Update MongoDB with fresh data
+    await collections.updateOne(
+      { collection: collectionData.collection },
+      { $set: collectionData },
+      { upsert: true }
+    );
 
-    return NextResponse.json(res);
+    await client.close();
+    console.log("Collection info saved to MongoDB:", collectionData.name);
+
+    return NextResponse.json(collectionData);
   } catch (error) {
     return NextResponse.json(
       {
