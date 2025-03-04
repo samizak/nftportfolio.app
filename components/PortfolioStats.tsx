@@ -48,7 +48,7 @@ export default function PortfolioStats({
       return currentValue > maxValue ? current : max;
     }, data[0]);
 
-    console.log(biggest);
+    // console.log(biggest);
 
     setBiggestHolding(biggest);
   }, [data, totalValue]);

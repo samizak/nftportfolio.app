@@ -21,7 +21,7 @@ const provider = createProvider();
 
 // Cache ENS lookups to reduce API calls
 const ensCache = new Map<string, { name: string | null; timestamp: number }>();
-const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
+const CACHE_DURATION = 1000 * 60 * 60; // 60 minutes
 
 export async function GET(req: any, res: any) {
   const { searchParams } = new URL(req.url);

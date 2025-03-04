@@ -45,7 +45,7 @@ export async function GET(req: any, res: any) {
     }
 
     const data = await response.json();
-    console.log(data);
+    // console.log(data);
     const price = data.ethereum.usd;
 
     // Update cache
