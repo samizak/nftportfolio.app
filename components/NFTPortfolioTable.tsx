@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar } from "@/components/ui/avatar";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import {
   Tooltip,
@@ -15,6 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ChevronUpIcon, ChevronDownIcon } from "@radix-ui/react-icons";
 
 interface NFTPortfolioTableProps {
   searchQuery: string;
@@ -22,11 +23,31 @@ interface NFTPortfolioTableProps {
   totalValue?: number;
 }
 
+type SortColumn =
+  | "name"
+  | "quantity"
+  | "floor_price"
+  | "total_value"
+  | "percentage";
+type SortDirection = "asc" | "desc";
+
 export default function NFTPortfolioTable({
   searchQuery,
   data = [],
   totalValue = 0,
 }: NFTPortfolioTableProps) {
+  const [sortColumn, setSortColumn] = useState<SortColumn>("percentage");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  const handleSort = (column: SortColumn) => {
+    if (column === sortColumn) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("desc");
+    }
+  };
+
   const filteredData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
@@ -40,8 +61,17 @@ export default function NFTPortfolioTable({
         ...item,
         percentage: totalValue > 0 ? (item.total_value / totalValue) * 100 : 0,
       }))
-      .sort((a, b) => b.total_value - a.total_value); // Sort by value descending
-  }, [data, searchQuery, totalValue]);
+      .sort((a, b) => {
+        if (sortColumn === "name") {
+          return sortDirection === "asc"
+            ? a.name?.localeCompare(b.name || "")
+            : b.name?.localeCompare(a.name || "");
+        }
+        return sortDirection === "asc"
+          ? (a[sortColumn] || 0) - (b[sortColumn] || 0)
+          : (b[sortColumn] || 0) - (a[sortColumn] || 0);
+      });
+  }, [data, searchQuery, totalValue, sortColumn, sortDirection]);
 
   if (filteredData.length === 0) {
     return (
@@ -56,24 +86,102 @@ export default function NFTPortfolioTable({
     );
   }
 
-  // console.log(filteredData);
-
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Collection</TableHead>
-          <TableHead className="text-right">Quantity</TableHead>
-          <TableHead className="text-right">Floor Price</TableHead>
-          <TableHead className="text-right">Value (Ξ)</TableHead>
-          <TableHead className="text-right">Portfolio (%)</TableHead>
+          <TableHead
+            onClick={() => handleSort("name")}
+            className="cursor-pointer"
+          >
+            <div className="flex items-center">
+              Collection
+              {sortColumn === "name" && (
+                <span className="ml-1">
+                  {sortDirection === "asc" ? (
+                    <ChevronUpIcon />
+                  ) : (
+                    <ChevronDownIcon />
+                  )}
+                </span>
+              )}
+            </div>
+          </TableHead>
+          <TableHead
+            onClick={() => handleSort("quantity")}
+            className="text-right cursor-pointer"
+          >
+            <div className="flex items-center justify-end">
+              Quantity
+              {sortColumn === "quantity" && (
+                <span className="ml-1">
+                  {sortDirection === "asc" ? (
+                    <ChevronUpIcon />
+                  ) : (
+                    <ChevronDownIcon />
+                  )}
+                </span>
+              )}
+            </div>
+          </TableHead>
+          <TableHead
+            onClick={() => handleSort("floor_price")}
+            className="text-right cursor-pointer"
+          >
+            <div className="flex items-center justify-end">
+              Floor Price
+              {sortColumn === "floor_price" && (
+                <span className="ml-1">
+                  {sortDirection === "asc" ? (
+                    <ChevronUpIcon />
+                  ) : (
+                    <ChevronDownIcon />
+                  )}
+                </span>
+              )}
+            </div>
+          </TableHead>
+          <TableHead
+            onClick={() => handleSort("total_value")}
+            className="text-right cursor-pointer"
+          >
+            <div className="flex items-center justify-end">
+              Value (Ξ)
+              {sortColumn === "total_value" && (
+                <span className="ml-1">
+                  {sortDirection === "asc" ? (
+                    <ChevronUpIcon />
+                  ) : (
+                    <ChevronDownIcon />
+                  )}
+                </span>
+              )}
+            </div>
+          </TableHead>
+          <TableHead
+            onClick={() => handleSort("percentage")}
+            className="text-right cursor-pointer"
+          >
+            <div className="flex items-center justify-end">
+              Portfolio (%)
+              {sortColumn === "percentage" && (
+                <span className="ml-1">
+                  {sortDirection === "asc" ? (
+                    <ChevronUpIcon />
+                  ) : (
+                    <ChevronDownIcon />
+                  )}
+                </span>
+              )}
+            </div>
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {filteredData.map((item) => (
           <TableRow key={item.collection}>
             <TableCell className="flex items-center gap-2">
-              <Avatar className="h-10 w-10">
+              <Avatar className="h-10 w-10 flex-shrink-0">
                 <img
                   src={item.image_url || "https://placehold.co/100?text=NFT"}
                   alt={item.name || "Collection"}
@@ -83,7 +191,7 @@ export default function NFTPortfolioTable({
                   }}
                 />
               </Avatar>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <div className="font-medium">
                   {item.name || "Unknown Collection"}
                 </div>
