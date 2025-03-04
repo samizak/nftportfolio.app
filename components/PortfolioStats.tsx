@@ -65,7 +65,7 @@ export default function PortfolioStats({
           <div className="text-2xl font-bold">
             Ξ {formatThousandSeparator(+totalValue.toFixed(2))}
           </div>
-          <div className="text-2xl text-muted-foreground">
+          <div className="text-lg text-muted-foreground">
             {selectedCurrency.symbol} {formatDollarValue(totalValue * ethPrice)}
           </div>
           <p className="text-xs text-muted-foreground">
@@ -129,7 +129,7 @@ export default function PortfolioStats({
                   </TooltipProvider>
                 )}
               </div>
-              <div className="text-lg text-muted-foreground">
+              <div className="text-lg font-bold">
                 Ξ{" "}
                 {formatThousandSeparator(
                   +(
