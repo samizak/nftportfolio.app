@@ -14,10 +14,19 @@ interface PortfolioViewProps {
     ethAddress: string;
     avatar: string;
   };
-  data?: any;
+  data?: any[];
+  ethPrice?: number;
+  totalNfts?: number;
+  totalValue?: number;
 }
 
-export default function PortfolioView({ user, data }: PortfolioViewProps) {
+export default function PortfolioView({
+  user,
+  data = [],
+  ethPrice = 0,
+  totalNfts = 0,
+  totalValue = 0,
+}: PortfolioViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
@@ -28,7 +37,12 @@ export default function PortfolioView({ user, data }: PortfolioViewProps) {
 
       <UserProfile user={user} />
 
-      <PortfolioStats />
+      <PortfolioStats
+        data={data}
+        ethPrice={ethPrice}
+        totalNfts={totalNfts}
+        totalValue={totalValue}
+      />
 
       <div className="mt-8">
         <Card>
@@ -43,7 +57,11 @@ export default function PortfolioView({ user, data }: PortfolioViewProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <NFTPortfolioTable searchQuery={searchQuery} data={data} />
+            <NFTPortfolioTable
+              searchQuery={searchQuery}
+              data={data}
+              totalValue={totalValue}
+            />
           </CardContent>
         </Card>
       </div>
