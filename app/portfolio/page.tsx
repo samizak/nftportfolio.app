@@ -93,13 +93,9 @@ export default function AddressPage() {
           const [collectionInfo, floorPrice] = await Promise.all([
             fetch(
               `/api/get-collection-info?slug=${collection.collection}`
-            ).then(async (res) => {
-              return res.json();
-            }),
-            fetch(`/api/get-price?slug=${collection.collection}`).then(
-              async (res) => {
-                return res.json();
-              }
+            ).then((res) => res.json()),
+            fetch(`/api/get-price?slug=${collection.collection}`).then((res) =>
+              res.json()
             ),
           ]);
 
