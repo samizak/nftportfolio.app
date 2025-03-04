@@ -55,9 +55,38 @@ export default function AddressPage() {
     while (retries < maxRetries) {
       try {
         const response = await fetch(url, options);
+
+        // Special handling for user profile endpoint
+        if (url.includes("/api/get-user-profile")) {
+          // For 404 responses (address not found), don't retry
+          if (response.status === 404) {
+            console.log("User profile not found (404), skipping retries");
+            return response;
+          }
+
+          // For other responses, check if it contains the "not found" error message
+          if (!response.ok) {
+            const clonedResponse = response.clone();
+            try {
+              const data = await clonedResponse.json();
+              if (
+                data.error &&
+                (data.error.includes("not found") ||
+                  (data.details && data.details.includes("not found")))
+              ) {
+                console.log("User profile not found error, skipping retries");
+                return response;
+              }
+            } catch (e) {
+              // If we can't parse the JSON, continue with normal retry logic
+            }
+          }
+        }
+
         if (!response.ok) {
           throw new Error(`Network response was not ok: ${response.status}`);
         }
+
         return response;
       } catch (error) {
         retries++;
@@ -73,6 +102,8 @@ export default function AddressPage() {
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
+
+    throw new Error("Failed to fetch after maximum retries");
   };
   // Update the ETH price fetch to use the retry mechanism
   useEffect(() => {
@@ -244,20 +275,57 @@ export default function AddressPage() {
         setIsLoading(true);
         setError(null);
 
-        const [userResponse, ensResponse] = await Promise.all([
-          fetchWithRetry(`/api/get-user-profile?id=${id}`),
-          fetchWithRetry(`/api/get-ens?id=${id}`),
-        ]);
-
-        const [userJson, ensJson] = await Promise.all([
-          userResponse?.json(),
-          ensResponse?.json(),
-        ]);
-
-        setUserData(userJson);
+        // Fetch ENS data first
+        const ensResponse = await fetchWithRetry(`/api/get-ens?id=${id}`);
+        const ensJson = await ensResponse?.json();
         setEnsData(ensJson);
+
+        // Then fetch user profile data
+        try {
+          const userResponse = await fetchWithRetry(
+            `/api/get-user-profile?id=${id}`
+          );
+          const userJson = await userResponse?.json();
+
+          // Check if there's an error in the response
+          if (userJson.error) {
+            console.warn("OpenSea profile not found:", userJson.error);
+            // Set minimal user data instead of failing
+            setUserData({
+              address: id,
+              username:
+                ensJson?.ens ||
+                `${id.substring(0, 6)}...${id.substring(id.length - 4)}`,
+              profile_image_url: "",
+            });
+          } else {
+            setUserData(userJson);
+          }
+        } catch (userError) {
+          console.warn("Error fetching user profile:", userError);
+          // Set minimal user data on error
+          setUserData({
+            address: id,
+            username:
+              ensJson?.ens ||
+              `${id.substring(0, 6)}...${id.substring(id.length - 4)}`,
+            profile_image_url: "",
+          });
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        console.error("Error in data fetching:", err);
+        // Only set error if it's not a "not found" error
+        if (err instanceof Error && !err.message.includes("not found")) {
+          setError(err.message || "An error occurred");
+        } else {
+          // For "not found" errors, set minimal data
+          setUserData({
+            address: id,
+            username: `${id.substring(0, 6)}...${id.substring(id.length - 4)}`,
+            profile_image_url: "",
+          });
+          setEnsData({ ens: "" });
+        }
       } finally {
         setIsLoading(false);
       }
@@ -283,10 +351,13 @@ export default function AddressPage() {
       </div>
     );
   }
+  // Update the user object creation to handle missing data more gracefully
   const user: any = {
-    name: userData?.username || "",
+    name:
+      userData?.username ||
+      `${id?.substring(0, 6)}...${id?.substring(id?.length - 4) || ""}`,
     ethHandle: ensData?.ens || "",
-    ethAddress: userData?.address || "",
+    ethAddress: userData?.address || id || "",
     avatar: userData?.profile_image_url || "",
   };
   return (

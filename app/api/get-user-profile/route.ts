@@ -17,28 +17,52 @@ async function fetchWithRetry(
   delay = 1000
 ) {
   let retries = 0;
+  let lastError: Error | null = null;
 
   while (retries < maxRetries) {
     try {
       const response = await fetch(url, options);
+
+      // If we get a 400 status code, check if it's the "address not found" error
+      if (response.status === 400) {
+        const errorData = await response.json();
+
+        // Check for the specific error message about address not found
+        if (
+          errorData.errors &&
+          errorData.errors.some(
+            (err: string) =>
+              err.includes("not found") || err.includes("Address or username")
+          )
+        ) {
+          // Return immediately with the error data - no need to retry
+          return { status: 404, data: errorData };
+        }
+      }
+
       if (!response.ok) {
         throw new Error(`Network response was not ok: ${response.status}`);
       }
-      return response;
+
+      return { status: 200, response };
     } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
       retries++;
       console.log(
         `Attempt ${retries}/${maxRetries} failed. Retrying in ${delay}ms...`
       );
 
       if (retries >= maxRetries) {
-        throw error;
+        break;
       }
 
       // Wait before retrying
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
+
+  // If we've exhausted all retries, throw the last error
+  throw lastError || new Error("Failed to fetch after multiple retries");
 }
 
 export async function GET(req: any, res: any) {
@@ -76,9 +100,30 @@ export async function GET(req: any, res: any) {
   };
 
   try {
-    // Use the retry mechanism
-    const response = await fetchWithRetry(openseaUrl, fetchOptions, 3, 1000);
-    const data = await response?.json();
+    // Use the retry mechanism - make sure it returns a response
+    const result = await fetchWithRetry(openseaUrl, fetchOptions, 3, 1000);
+
+    console.log(result);
+
+    // Handle 400 error case (address not found)
+    if (result.status === 404) {
+      return NextResponse.json(
+        {
+          error: "Address not found",
+          details: result.data.errors
+            ? result.data.errors[0]
+            : "User not found on OpenSea",
+        },
+        { status: 404 } // Using 404 for not found is more appropriate for the client
+      );
+    }
+
+    // Check if response exists before trying to parse JSON
+    if (!result.response) {
+      throw new Error("Failed to fetch data after retries");
+    }
+
+    const data = await result.response.json();
 
     // Store in cache
     memoryCache[cacheKey] = {
@@ -91,6 +136,7 @@ export async function GET(req: any, res: any) {
 
     return NextResponse.json(data);
   } catch (error) {
+    console.error("Error fetching user profile:", error);
     return NextResponse.json(
       {
         error:
