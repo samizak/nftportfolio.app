@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from "react";
 
 type UserProfile = {
   address: string;
@@ -16,7 +16,7 @@ type UserProfile = {
 type EnsData = {
   address: string;
   ens: string;
-}
+};
 
 type UserContextType = {
   userData: UserProfile | null;
@@ -38,16 +38,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <UserContext.Provider value={{
-      userData,
-      ensData,
-      setUserData,
-      setEnsData,
-      isLoading,
-      setIsLoading,
-      error,
-      setError
-    }}>
+    <UserContext.Provider
+      value={{
+        userData,
+        ensData,
+        setUserData,
+        setEnsData,
+        isLoading,
+        setIsLoading,
+        error,
+        setError,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );
@@ -56,7 +58,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 export function useUser() {
   const context = useContext(UserContext);
   if (context === undefined) {
-    throw new Error('useUser must be used within a UserProvider');
+    throw new Error("useUser must be used within a UserProvider");
   }
   return context;
 }

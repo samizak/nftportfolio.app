@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,17 +8,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 interface ProfileMenuProps {
   user: {
     name: string;
     ethHandle: string;
     ethAddress: string;
-    avatar: string,
-  },
+    avatar: string;
+  };
 }
 
 export default function ProfileMenu({ user }: ProfileMenuProps) {
@@ -26,8 +26,8 @@ export default function ProfileMenu({ user }: ProfileMenuProps) {
 
   const handleLogout = () => {
     // Add any logout logic here (clear tokens, etc.)
-    router.push('/');
-  }
+    router.push("/");
+  };
 
   return (
     <DropdownMenu>
@@ -44,11 +44,13 @@ export default function ProfileMenu({ user }: ProfileMenuProps) {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{user.name}</p>
             <p className="text-sm font-medium leading-none">{user.ethHandle}</p>
-            <p className="text-xs text-muted-foreground truncate">{user.ethAddress}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {user.ethAddress}
+            </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem 
+        <DropdownMenuItem
           className="text-red-500 cursor-pointer"
           onClick={handleLogout}
         >
@@ -56,5 +58,5 @@ export default function ProfileMenu({ user }: ProfileMenuProps) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

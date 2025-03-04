@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { useState } from "react"
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 const currencies = [
   { code: "USD", symbol: "$" },
@@ -19,11 +19,11 @@ const currencies = [
   { code: "CNY", symbol: "CN¥" },
   { code: "CHF", symbol: "CHF" },
   { code: "HKD", symbol: "HK$" },
-  { code: "SGD", symbol: "S$" }
-]
+  { code: "SGD", symbol: "S$" },
+];
 
 export default function CurrencySelector() {
-  const [selectedCurrency, setSelectedCurrency] = useState(currencies[0])
+  const [selectedCurrency, setSelectedCurrency] = useState(currencies[0]);
 
   return (
     <DropdownMenu>
@@ -43,5 +43,5 @@ export default function CurrencySelector() {
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

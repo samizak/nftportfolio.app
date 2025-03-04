@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 interface LandingPageProps {
   address: string;
@@ -11,10 +11,10 @@ interface LandingPageProps {
   onConnectMetamask: () => Promise<void>;
 }
 
-export default function LandingPage({ 
-  address, 
-  setAddress, 
-  onConnectMetamask 
+export default function LandingPage({
+  address,
+  setAddress,
+  onConnectMetamask,
 }: LandingPageProps) {
   const router = useRouter();
 
@@ -22,13 +22,15 @@ export default function LandingPage({
     if (address.trim()) {
       router.push(`/address?id=${address.trim()}`);
     }
-  }
+  };
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4">
       <h1 className="text-4xl font-bold mb-2">nftportfolio.app</h1>
-      <p className="text-muted-foreground mb-8">Track any NFT portfolio in one place</p>
-      
+      <p className="text-muted-foreground mb-8">
+        Track any NFT portfolio in one place
+      </p>
+
       <div className="w-full max-w-md space-y-4">
         <div className="relative">
           <Input
@@ -36,10 +38,10 @@ export default function LandingPage({
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             className="w-full"
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           />
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="absolute right-2 top-1/2 -translate-y-1/2"
             onClick={handleSearch}
           >
@@ -56,8 +58,8 @@ export default function LandingPage({
           </div>
         </div>
 
-        <Button 
-          className="w-full flex items-center justify-center gap-2" 
+        <Button
+          className="w-full flex items-center justify-center gap-2"
           onClick={onConnectMetamask}
         >
           <Image
@@ -73,5 +75,5 @@ export default function LandingPage({
         Made by Sami Zakir Ahmed
       </footer>
     </main>
-  )
+  );
 }

@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import NFTPortfolioTable from "@/components/NFTPortfolioTable"
-import PortfolioStats from "@/components/PortfolioStats"
-import UserProfile from "@/components/UserProfile"
-import { Input } from "@/components/ui/input"
-import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import NFTPortfolioTable from "@/components/NFTPortfolioTable";
+import PortfolioStats from "@/components/PortfolioStats";
+import UserProfile from "@/components/UserProfile";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
 
 interface PortfolioViewProps {
   user: {
@@ -14,21 +14,22 @@ interface PortfolioViewProps {
     ethAddress: string;
     avatar: string;
   };
+  data?: any;
 }
 
-export default function PortfolioView({ user }: PortfolioViewProps) {
-  const [searchQuery, setSearchQuery] = useState("")
-  
+export default function PortfolioView({ user, data }: PortfolioViewProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+
   return (
     <main className="container mx-auto p-4">
       <div className="mb-8">
         <h1 className="text-4xl font-bold">nftportfolio.app</h1>
       </div>
-      
+
       <UserProfile user={user} />
-      
+
       <PortfolioStats />
-      
+
       <div className="mt-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -42,14 +43,14 @@ export default function PortfolioView({ user }: PortfolioViewProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <NFTPortfolioTable searchQuery={searchQuery} />
+            <NFTPortfolioTable searchQuery={searchQuery} data={data} />
           </CardContent>
         </Card>
       </div>
-      
+
       <footer className="mt-8 text-center text-sm text-muted-foreground">
         Made by Sami Zakir Ahmed
       </footer>
     </main>
-  )
+  );
 }

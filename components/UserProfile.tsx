@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { ChevronDown, Copy } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, Copy } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
 interface UserProfileProps {
   user: {
@@ -18,13 +18,13 @@ interface UserProfileProps {
     ethHandle: string;
     ethAddress: string;
     avatar: string;
-  }
+  };
 }
 
 export default function UserProfile({ user }: UserProfileProps) {
   return (
     <div className="flex items-center mb-8 gap-4">
-      <Avatar className="h-16 w-16 border-2 border-primary">
+      <Avatar className="h-28 w-28 border-2 border-primary">
         <AvatarImage src={user.avatar} alt={user.name} />
         <AvatarFallback>{user.name.substring(0, 2)}</AvatarFallback>
       </Avatar>
@@ -46,7 +46,9 @@ export default function UserProfile({ user }: UserProfileProps) {
                 <Copy className="h-4 w-4 ml-2 text-muted-foreground" />
               </DropdownMenuItem>
               <DropdownMenuItem className="flex flex-row items-center justify-between cursor-pointer">
-                <span className="font-medium truncate max-w-[200px]">{user.ethAddress}</span>
+                <span className="font-medium truncate max-w-[200px]">
+                  {user.ethAddress}
+                </span>
                 <Copy className="h-4 w-4 ml-2 text-muted-foreground" />
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -54,5 +56,5 @@ export default function UserProfile({ user }: UserProfileProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

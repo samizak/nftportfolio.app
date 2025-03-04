@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function PortfolioStats() {
   return (
@@ -10,7 +10,9 @@ export default function PortfolioStats() {
         <CardContent>
           <div className="text-2xl font-bold">Ξ 465.9</div>
           <div className="text-2xl text-muted-foreground">$ 799,089</div>
-          <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+          <p className="text-xs text-muted-foreground">
+            +20.1% from last month
+          </p>
         </CardContent>
       </Card>
 
@@ -20,7 +22,9 @@ export default function PortfolioStats() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">2,800</div>
-          <p className="text-xs text-muted-foreground">Across 300 collections</p>
+          <p className="text-xs text-muted-foreground">
+            Across 300 collections
+          </p>
         </CardContent>
       </Card>
 
@@ -34,5 +38,5 @@ export default function PortfolioStats() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
