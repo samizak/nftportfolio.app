@@ -20,7 +20,7 @@ export default function LandingPage({
 
   const handleSearch = () => {
     if (address.trim()) {
-      router.push(`/address?id=${address.trim()}`);
+      router.push(`/portfolio?id=${address.trim()}`);
     }
   };
 

@@ -12,7 +12,7 @@ export default function UserHeader() {
 
   // Only fetch user data if we're on an address page
   useEffect(() => {
-    if (!pathname.startsWith("/address")) {
+    if (!pathname.startsWith("/portfolio")) {
       return;
     }
 

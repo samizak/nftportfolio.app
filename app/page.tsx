@@ -1,33 +1,35 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import LandingPage from "@/components/LandingPage"
+import { useState } from "react";
+import LandingPage from "@/components/LandingPage";
 
 export default function Home() {
-  const [address, setAddress] = useState("")
+  const [address, setAddress] = useState("");
 
   const connectMetamask = async () => {
     const ethereum = (window as any).ethereum;
-    
-    if (typeof ethereum !== 'undefined') {
+
+    if (typeof ethereum !== "undefined") {
       try {
-        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const accounts = await ethereum.request({
+          method: "eth_requestAccounts",
+        });
         if (accounts[0]) {
-          window.location.href = `/address?id=${accounts[0]}`;
+          window.location.href = `/portfolio?id=${accounts[0]}`;
         }
       } catch (error) {
-        console.error('User denied account access');
+        console.error("User denied account access");
       }
     } else {
-      window.open('https://metamask.io/download/', '_blank');
+      window.open("https://metamask.io/download/", "_blank");
     }
-  }
-  
+  };
+
   return (
-    <LandingPage 
+    <LandingPage
       address={address}
       setAddress={setAddress}
       onConnectMetamask={connectMetamask}
     />
-  )
+  );
 }
