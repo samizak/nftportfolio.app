@@ -103,10 +103,6 @@ export default function AddressPage() {
             ),
           ]);
 
-          // console.log(collectionInfo);
-          console.log(floorPrice);
-          // console.log(collection.count);
-
           const collectionData: CollectionData = {
             collection: collectionInfo.collection,
             name: collectionInfo.name,
@@ -117,14 +113,15 @@ export default function AddressPage() {
             total_value: floorPrice.floor_price * collection.count,
           };
 
-          console.log(collectionData);
+          // console.log(collectionData);
 
           totalPortfolioValue += collectionData.total_value || 0;
           collectionDetails.push(collectionData);
-        }
 
-        setCollections(collectionDetails);
-        setTotalValue(totalPortfolioValue);
+          // Update the data in real time
+          setTotalValue(totalPortfolioValue);
+          setCollections(collectionDetails);
+        }
       } catch (error) {
         console.error("Error fetching collection data:", error);
         setError("Failed to fetch collection data");
