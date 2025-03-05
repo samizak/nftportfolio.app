@@ -1,15 +1,73 @@
 import { NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 
-// Simple in-memory cache for development/testing
-type CacheEntry = {
-  data: any;
-  timestamp: number;
-};
+// Cache duration: 5 minutes in milliseconds
+const CACHE_DURATION = 5 * 60 * 1000;
 
-// Cache structure: { [address_next]: CacheEntry }
-const memoryCache: Record<string, CacheEntry> = {};
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+// MongoDB connection
+let client: MongoClient | null = null;
+
+async function connectToDatabase() {
+  if (client) return client;
+  
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error("Please define the MONGODB_URI environment variable");
+  }
+  
+  client = new MongoClient(uri);
+  await client.connect();
+  return client;
+}
+
+async function getCachedData(cacheKey: string) {
+  const client = await connectToDatabase();
+  const db = client.db("nft-portfolio");
+  const cacheCollection = db.collection("cache");
+  
+  const cachedEntry = await cacheCollection.findOne({ key: cacheKey });
+  
+  if (!cachedEntry) return null;
+  
+  const now = Date.now();
+  if (now - cachedEntry.timestamp < CACHE_DURATION) {
+    return cachedEntry.data;
+  }
+  
+  // Cache expired, remove it
+  await cacheCollection.deleteOne({ key: cacheKey });
+  return null;
+}
+
+async function setCachedData(cacheKey: string, data: any) {
+  const client = await connectToDatabase();
+  const db = client.db("nft-portfolio");
+  const cacheCollection = db.collection("cache");
+  
+  // Create or update cache entry
+  await cacheCollection.updateOne(
+    { key: cacheKey },
+    { 
+      $set: { 
+        key: cacheKey,
+        data: data,
+        timestamp: Date.now()
+      }
+    },
+    { upsert: true }
+  );
+}
+
+async function cleanupCache() {
+  const client = await connectToDatabase();
+  const db = client.db("nft-portfolio");
+  const cacheCollection = db.collection("cache");
+  
+  const now = Date.now();
+  await cacheCollection.deleteMany({
+    timestamp: { $lt: now - CACHE_DURATION }
+  });
+}
 
 export async function GET(req: any, res: any) {
   const { searchParams } = new URL(req.url);
@@ -27,17 +85,20 @@ export async function GET(req: any, res: any) {
   // Create a cache key from address and next cursor
   const cacheKey = `${address.toLowerCase()}_${next}`;
   
-  // Check if we have a valid cache entry
-  const now = Date.now();
-  const cachedResult = memoryCache[cacheKey];
-  
-  if (cachedResult && (now - cachedResult.timestamp) < CACHE_DURATION) {
-    // Return cached data if it's still fresh
-    return NextResponse.json({
-      ...cachedResult.data,
-      cached: true,
-      cachedAt: new Date(cachedResult.timestamp).toISOString()
-    });
+  // Check MongoDB cache
+  try {
+    const cachedData = await getCachedData(cacheKey);
+    
+    if (cachedData) {
+      return NextResponse.json({
+        ...cachedData,
+        cached: true,
+        cachedAt: new Date(cachedData.timestamp).toISOString()
+      });
+    }
+  } catch (error) {
+    console.error("Cache error:", error);
+    // Continue with fetch if cache fails
   }
 
   const openSeaFetchOptions = {
@@ -82,16 +143,18 @@ export async function GET(req: any, res: any) {
       nfts: allNfts,
       next: currentNext, // Return the next cursor for further pagination if needed
       pagesFetched: pageCount,
+      timestamp: Date.now()
     };
     
-    // Store in cache
-    memoryCache[cacheKey] = {
-      data: responseData,
-      timestamp: now
-    };
-    
-    // Clean up old cache entries (optional but good practice)
-    cleanupCache();
+    // Store in MongoDB cache
+    try {
+      await setCachedData(cacheKey, responseData);
+      // Clean up old cache entries
+      await cleanupCache();
+    } catch (error) {
+      console.error("Cache storage error:", error);
+      // Continue even if caching fails
+    }
     
     return NextResponse.json(responseData);
   } catch (error: any) {
@@ -101,14 +164,4 @@ export async function GET(req: any, res: any) {
       { status: 500 }
     );
   }
-}
-
-// Helper function to remove expired cache entries
-function cleanupCache() {
-  const now = Date.now();
-  Object.keys(memoryCache).forEach(key => {
-    if (now - memoryCache[key].timestamp > CACHE_DURATION) {
-      delete memoryCache[key];
-    }
-  });
 }
