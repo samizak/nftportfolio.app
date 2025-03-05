@@ -147,31 +147,31 @@ export function DataTable({
         <TableHeader>
           <TableRow>
             <TableHead
-              className="w-[250px] cursor-pointer"
+              className="w-[40%] cursor-pointer"
               onClick={() => requestSort("name")}
             >
               Collection {getSortIndicator("name")}
             </TableHead>
             <TableHead
-              className="text-right cursor-pointer"
+              className="w-[12%] text-right cursor-pointer"
               onClick={() => requestSort("quantity")}
             >
               Quantity {getSortIndicator("quantity")}
             </TableHead>
             <TableHead
-              className="text-right cursor-pointer"
+              className="w-[16%] text-right cursor-pointer"
               onClick={() => requestSort("floor_price")}
             >
               Floor Price {getSortIndicator("floor_price")}
             </TableHead>
             <TableHead
-              className="text-right cursor-pointer"
+              className="w-[16%] text-right cursor-pointer"
               onClick={() => requestSort("total_value")}
             >
               Value {getSortIndicator("total_value")}
             </TableHead>
             <TableHead
-              className="text-right cursor-pointer"
+              className="w-[16%] text-right cursor-pointer"
               onClick={() => requestSort("portfolioPercentage")}
             >
               Portfolio % {getSortIndicator("portfolioPercentage")}
@@ -181,10 +181,10 @@ export function DataTable({
         <TableBody>
           {paginatedData.map((collection) => (
             <TableRow key={collection.collection}>
-              <TableCell className="font-medium">
-                <div className="flex items-center space-x-3">
+              <TableCell className="w-[40%]">
+                <div className="flex items-center space-x-3 min-w-0">
                   {collection.image_url ? (
-                    <div className="relative h-10 w-10 rounded-md overflow-hidden">
+                    <div className="relative h-10 w-10 flex-shrink-0 rounded-md overflow-hidden">
                       <Image
                         src={collection.image_url}
                         alt={collection.name}
@@ -194,17 +194,17 @@ export function DataTable({
                       />
                     </div>
                   ) : (
-                    <div className="h-10 w-10 rounded-md bg-gray-200 dark:bg-gray-800"></div>
+                    <div className="h-10 w-10 flex-shrink-0 rounded-md bg-gray-200 dark:bg-gray-800"></div>
                   )}
-                  <div className="flex flex-col">
-                    <div className="flex items-center">
-                      <span className="font-medium">{collection.name}</span>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium truncate">{collection.name}</span>
                       {collection.is_verified && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger>
                               <Image
-                                className="inline-block cursor-pointer ml-1"
+                                className="inline-block cursor-pointer flex-shrink-0"
                                 src="/verified_checkmark.svg"
                                 alt="verified"
                                 width={18}
@@ -218,49 +218,46 @@ export function DataTable({
                         </TooltipProvider>
                       )}
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
                       {collection.collection}
                     </span>
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="w-[12%] text-right">
                 <Badge variant="outline">{collection.quantity}</Badge>
               </TableCell>
-              <TableCell className="text-right">
-                {collection.floor_price
-                  ? `${collection.floor_price.toFixed(3)} ETH`
-                  : "N/A"}
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {collection.floor_price
-                    ? formatCurrency(
-                        collection.floor_price * ethPrice,
-                        selectedCurrency.code,
-                        selectedCurrency.symbol
-                      )
-                    : ""}
+              <TableCell className="w-[16%] text-right">
+                <div className="space-y-1">
+                  <div>{collection.floor_price ? `${collection.floor_price.toFixed(3)} ETH` : "N/A"}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {collection.floor_price
+                      ? formatCurrency(
+                          collection.floor_price * ethPrice,
+                          selectedCurrency.code,
+                          selectedCurrency.symbol
+                        )
+                      : ""}
+                  </div>
                 </div>
               </TableCell>
-              <TableCell className="text-right">
-                {collection.total_value
-                  ? `${collection.total_value.toFixed(3)} ETH`
-                  : "N/A"}
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {collection.total_value
-                    ? formatCurrency(
-                        collection.total_value * ethPrice,
-                        selectedCurrency.code,
-                        selectedCurrency.symbol
-                      )
-                    : ""}
+              <TableCell className="w-[16%] text-right">
+                <div className="space-y-1">
+                  <div>{collection.total_value ? `${collection.total_value.toFixed(3)} ETH` : "N/A"}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {collection.total_value
+                      ? formatCurrency(
+                          collection.total_value * ethPrice,
+                          selectedCurrency.code,
+                          selectedCurrency.symbol
+                        )
+                      : ""}
+                  </div>
                 </div>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="w-[16%] text-right">
                 {totalValue > 0
-                  ? `${(
-                      ((collection.total_value || 0) / totalValue) *
-                      100
-                    ).toFixed(2)}%`
+                  ? `${(((collection.total_value || 0) / totalValue) * 100).toFixed(2)}%`
                   : "0%"}
               </TableCell>
             </TableRow>
