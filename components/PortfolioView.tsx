@@ -8,21 +8,8 @@ import { useState } from "react";
 import TableFilters from "@/components/TableFilters";
 import { DataTable } from "@/components/DataTable";
 import { containerClass } from "@/lib/utils";
-
-interface PortfolioViewProps {
-  user: {
-    name: string;
-    ethHandle: string;
-    ethAddress: string;
-    avatar: string;
-    banner: string;
-  };
-  data?: any[];
-  ethPrice?: number;
-  totalNfts?: number;
-  totalValue?: number;
-  selectedCurrency?: { code: string; symbol: string };
-}
+import { PortfolioViewProps } from "@/types/portfolio";
+import { useEffect } from "react";
 
 export default function PortfolioView({
   user,
@@ -35,6 +22,11 @@ export default function PortfolioView({
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredData, setFilteredData] = useState(data);
 
+  // Add this effect to update filteredData when data changes
+  useEffect(() => {
+    setFilteredData(applySearchAndFilters(searchQuery, data));
+  }, [data]);
+
   // Apply both search and filters
   const applySearchAndFilters = (
     searchTerm: string,
@@ -44,8 +36,8 @@ export default function PortfolioView({
 
     return dataToFilter.filter(
       (item) =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.collection.toLowerCase().includes(searchTerm.toLowerCase())
+        item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.collection?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
 
@@ -61,7 +53,7 @@ export default function PortfolioView({
     const minValue = min === "" ? -Infinity : parseFloat(min);
     const maxValue = max === "" ? Infinity : parseFloat(max);
 
-    const filtered = data.filter((item) => {
+    const filtered = data.filter((item: any) => {
       let value;
       switch (field) {
         case "quantity":
@@ -129,12 +121,23 @@ export default function PortfolioView({
               </div>
             </CardHeader>
             <CardContent>
-              <DataTable
-                data={filteredData}
-                ethPrice={ethPrice}
-                totalValue={totalValue}
-                selectedCurrency={selectedCurrency}
-              />
+              {filteredData.length === 0 && data.length > 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <p className="text-muted-foreground mb-2">
+                    No collections found with the current filters
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Try adjusting your search term or filter criteria
+                  </p>
+                </div>
+              ) : (
+                <DataTable
+                  data={filteredData}
+                  ethPrice={ethPrice}
+                  totalValue={totalValue}
+                  selectedCurrency={selectedCurrency}
+                />
+              )}
             </CardContent>
           </Card>
         </div>

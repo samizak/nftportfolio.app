@@ -18,16 +18,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-interface CollectionData {
-  collection: string;
-  name: string;
-  quantity: number;
-  image_url: string;
-  is_verified: boolean;
-  floor_price?: number;
-  total_value?: number;
-}
+import { CollectionData } from "@/types/nft";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface DataTableProps {
   data: CollectionData[];
@@ -45,6 +38,9 @@ export function DataTable({
   totalValue,
   selectedCurrency,
 }: DataTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25; // Number of items to show per page
+
   const [sortConfig, setSortConfig] = useState<{
     key: keyof CollectionData | "portfolioPercentage";
     direction: "ascending" | "descending";
@@ -53,7 +49,42 @@ export function DataTable({
     direction: "descending",
   });
 
+  // Check if data is valid before sorting
+  if (!data || !Array.isArray(data)) {
+    console.error("DataTable received invalid data:", data);
+    return <div>No data available</div>;
+  }
+
+  // Add a loading state when we have a totalValue but no data yet
+  if (data.length === 0 && totalValue > 0) {
+    return (
+      <div className="rounded-md border p-8 text-center">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900 dark:border-gray-100"></div>
+          <p>Loading NFT collection data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show a message when there's no data
+  if (data.length === 0) {
+    return (
+      <div className="rounded-md border p-8 text-center">
+        <p className="text-muted-foreground">No NFT collections found</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Try searching for a different wallet address
+        </p>
+      </div>
+    );
+  }
   const sortedData = [...data].sort((a, b) => {
+    // Add debugging for sorting
+    if (!a || !b) {
+      console.warn("Sorting received undefined items:", { a, b });
+      return 0;
+    }
+
     if (sortConfig.key === "portfolioPercentage") {
       const aValue = ((a.total_value || 0) / totalValue) * 100;
       const bValue = ((b.total_value || 0) / totalValue) * 100;
@@ -65,6 +96,15 @@ export function DataTable({
     // Fix for possibly undefined objects
     const aValue = a[sortConfig.key as keyof typeof a];
     const bValue = b[sortConfig.key as keyof typeof b];
+
+    // Log undefined values during sorting
+    if (aValue === undefined || bValue === undefined) {
+      console.warn(`Undefined values for key ${sortConfig.key}:`, {
+        collection: a.collection || b.collection,
+        aValue,
+        bValue,
+      });
+    }
 
     if (aValue === undefined) return 1;
     if (bValue === undefined) return -1;
@@ -78,12 +118,20 @@ export function DataTable({
     return 0;
   });
 
+  // Calculate pagination values
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, sortedData.length);
+  const paginatedData = sortedData.slice(startIndex, endIndex);
+
   const requestSort = (key: keyof CollectionData | "portfolioPercentage") => {
     let direction: "ascending" | "descending" = "ascending";
     if (sortConfig.key === key && sortConfig.direction === "ascending") {
       direction = "descending";
     }
     setSortConfig({ key, direction });
+    // Reset to first page when sorting changes
+    setCurrentPage(1);
   };
 
   const getSortIndicator = (
@@ -131,7 +179,7 @@ export function DataTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedData.map((collection) => (
+          {paginatedData.map((collection) => (
             <TableRow key={collection.collection}>
               <TableCell className="font-medium">
                 <div className="flex items-center space-x-3">
@@ -141,6 +189,7 @@ export function DataTable({
                         src={collection.image_url}
                         alt={collection.name}
                         fill
+                        sizes="40px"
                         className="object-cover"
                       />
                     </div>
@@ -218,6 +267,39 @@ export function DataTable({
           ))}
         </TableBody>
       </Table>
+
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t">
+          <div className="text-sm text-muted-foreground">
+            Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
+            <span className="font-medium">{endIndex}</span> of{" "}
+            <span className="font-medium">{sortedData.length}</span> collections
+          </div>
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
