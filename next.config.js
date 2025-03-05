@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['i.seadn.io'],
+    domains: ["i.seadn.io", "openseauserdata.com"],
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
