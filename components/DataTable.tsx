@@ -146,43 +146,69 @@ export function DataTable({
     <div className="rounded-md border">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="border-b border-border/40 bg-muted/30 hover:bg-muted/50 transition-colors">
             <TableHead
-              className="w-[40%] cursor-pointer"
+              className="w-[40%] cursor-pointer py-3.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 pl-4 h-full my-auto"
               onClick={() => requestSort("name")}
             >
-              Collection {getSortIndicator("name")}
+              Collection{" "}
+              {getSortIndicator("name") && (
+                <span className="text-primary">{getSortIndicator("name")}</span>
+              )}
             </TableHead>
             <TableHead
-              className="w-[12%] text-right cursor-pointer"
+              className="w-[12%] text-right cursor-pointer py-3.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors my-auto"
               onClick={() => requestSort("quantity")}
             >
-              Quantity {getSortIndicator("quantity")}
+              Quantity{" "}
+              {getSortIndicator("quantity") && (
+                <span className="text-primary">
+                  {getSortIndicator("quantity")}
+                </span>
+              )}
             </TableHead>
             <TableHead
-              className="w-[16%] text-right cursor-pointer"
+              className="w-[16%] text-right cursor-pointer py-3.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors my-auto"
               onClick={() => requestSort("floor_price")}
             >
-              Floor Price {getSortIndicator("floor_price")}
+              Floor Price{" "}
+              {getSortIndicator("floor_price") && (
+                <span className="text-primary">
+                  {getSortIndicator("floor_price")}
+                </span>
+              )}
             </TableHead>
             <TableHead
-              className="w-[16%] text-right cursor-pointer"
+              className="w-[16%] text-right cursor-pointer py-3.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors my-auto"
               onClick={() => requestSort("total_value")}
             >
-              Value {getSortIndicator("total_value")}
+              Value{" "}
+              {getSortIndicator("total_value") && (
+                <span className="text-primary">
+                  {getSortIndicator("total_value")}
+                </span>
+              )}
             </TableHead>
             <TableHead
-              className="w-[16%] text-right cursor-pointer"
+              className="w-[16%] text-right cursor-pointer py-3.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors my-auto pr-4"
               onClick={() => requestSort("portfolioPercentage")}
             >
-              Portfolio % {getSortIndicator("portfolioPercentage")}
+              Portfolio %{" "}
+              {getSortIndicator("portfolioPercentage") && (
+                <span className="text-primary">
+                  {getSortIndicator("portfolioPercentage")}
+                </span>
+              )}
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {paginatedData.map((collection) => (
-            <TableRow key={collection.collection}>
-              <TableCell className="w-[40%]">
+            <TableRow
+              key={collection.collection}
+              className="hover:bg-muted/20 transition-colors"
+            >
+              <TableCell className="w-[40%] py-3 pl-4">
                 <div className="flex items-center space-x-3 min-w-0">
                   {collection.image_url ? (
                     <div className="relative h-10 w-10 flex-shrink-0 rounded-md overflow-hidden">
@@ -228,10 +254,10 @@ export function DataTable({
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="w-[12%] text-right">
+              <TableCell className="w-[12%] text-right py-3 align-middle">
                 <Badge variant="outline">{collection.quantity}</Badge>
               </TableCell>
-              <TableCell className="w-[16%] text-right">
+              <TableCell className="w-[16%] text-right py-3 align-middle">
                 <div className="space-y-1">
                   <div>
                     {collection.floor_price
@@ -249,7 +275,7 @@ export function DataTable({
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="w-[16%] text-right">
+              <TableCell className="w-[16%] text-right py-3 align-middle">
                 <div className="space-y-1">
                   <div>
                     {collection.total_value
@@ -269,7 +295,7 @@ export function DataTable({
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="w-[16%] text-right">
+              <TableCell className="w-[16%] text-right py-3 pr-4 align-middle">
                 {totalValue > 0
                   ? `${(
                       ((collection.total_value || 0) / totalValue) *
