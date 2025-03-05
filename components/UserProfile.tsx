@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import Image from "next/image";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,11 +48,15 @@ export default function UserProfile({ user }: UserProfileProps) {
       <div className="relative h-80 w-full">
         {user.banner !== "" && !bannerError ? (
           <div className="relative h-full w-full">
-            <img
+            <Image
               src={user.banner}
               alt="Profile banner"
-              className="w-full h-full object-cover"
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover"
               onError={() => setBannerError(true)}
+              unoptimized={user.banner.endsWith('.gif')}
             />
             {/* Gradient overlay for banner image */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/10 to-background/80"></div>
@@ -59,7 +64,8 @@ export default function UserProfile({ user }: UserProfileProps) {
         ) : (
           <div className="w-full h-full">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary/10 to-secondary/20"></div>
-            <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-30"></div>
+            {/* Replace the missing grid pattern with a CSS-based pattern */}
+            <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px] opacity-30"></div>
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80"></div>
           </div>
         )}

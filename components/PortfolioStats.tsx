@@ -21,6 +21,7 @@ export default function PortfolioStats({
   selectedCurrency = { code: "USD", symbol: "$" },
 }: PortfolioStatsProps) {
   const [biggestHolding, setBiggestHolding] = useState<CollectionData>();
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     if (!Array.isArray(data) || data.length === 0) {
@@ -34,9 +35,8 @@ export default function PortfolioStats({
       return currentValue > maxValue ? current : max;
     }, data[0]);
 
-    // console.log(biggest);
-
     setBiggestHolding(biggest);
+    setImageError(false);
   }, [data, totalValue]);
 
   return (
@@ -78,16 +78,22 @@ export default function PortfolioStats({
         </CardHeader>
         <CardContent className="space-y-1">
           <div className="flex items-center gap-2">
-            {biggestHolding?.image_url && (
-              <img
-                src={biggestHolding.image_url}
-                alt={biggestHolding.name || "Collection"}
-                className="h-16 w-16 rounded-full"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    "https://placehold.co/100?text=NFT";
-                }}
-              />
+            {biggestHolding?.image_url && !imageError ? (
+              <div className="relative h-16 w-16 rounded-full overflow-hidden">
+                <Image
+                  src={biggestHolding.image_url}
+                  alt={biggestHolding.name || "Collection"}
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                  onError={() => setImageError(true)}
+                  unoptimized={biggestHolding.image_url.endsWith('.gif')}
+                />
+              </div>
+            ) : (
+              <div className="h-16 w-16 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-gray-500">
+                NFT
+              </div>
             )}
             <div>
               <div className="flex items-center gap-2">

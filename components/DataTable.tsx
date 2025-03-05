@@ -21,6 +21,7 @@ import {
 import { CollectionData } from "@/types/nft";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { formatThousandSeparator } from "@/utils/formatters";
 
 interface DataTableProps {
   data: CollectionData[];
@@ -191,6 +192,7 @@ export function DataTable({
                         fill
                         sizes="40px"
                         className="object-cover"
+                        unoptimized={collection.image_url.endsWith(".gif")}
                       />
                     </div>
                   ) : (
@@ -198,7 +200,9 @@ export function DataTable({
                   )}
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-1">
-                      <span className="font-medium truncate">{collection.name}</span>
+                      <span className="font-medium truncate">
+                        {collection.name}
+                      </span>
                       {collection.is_verified && (
                         <TooltipProvider>
                           <Tooltip>
@@ -229,7 +233,11 @@ export function DataTable({
               </TableCell>
               <TableCell className="w-[16%] text-right">
                 <div className="space-y-1">
-                  <div>{collection.floor_price ? `${collection.floor_price.toFixed(3)} ETH` : "N/A"}</div>
+                  <div>
+                    {collection.floor_price
+                      ? `${collection.floor_price.toFixed(3)} ETH`
+                      : "N/A"}
+                  </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
                     {collection.floor_price
                       ? formatCurrency(
@@ -243,7 +251,13 @@ export function DataTable({
               </TableCell>
               <TableCell className="w-[16%] text-right">
                 <div className="space-y-1">
-                  <div>{collection.total_value ? `${collection.total_value.toFixed(3)} ETH` : "N/A"}</div>
+                  <div>
+                    {collection.total_value
+                      ? `${formatThousandSeparator(
+                          +collection.total_value.toFixed(3)
+                        )} ETH`
+                      : "N/A"}
+                  </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
                     {collection.total_value
                       ? formatCurrency(
@@ -257,7 +271,10 @@ export function DataTable({
               </TableCell>
               <TableCell className="w-[16%] text-right">
                 {totalValue > 0
-                  ? `${(((collection.total_value || 0) / totalValue) * 100).toFixed(2)}%`
+                  ? `${(
+                      ((collection.total_value || 0) / totalValue) *
+                      100
+                    ).toFixed(2)}%`
                   : "0%"}
               </TableCell>
             </TableRow>
