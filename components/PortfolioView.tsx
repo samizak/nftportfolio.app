@@ -11,11 +11,7 @@ import { containerClass } from "@/lib/utils";
 import { PortfolioViewProps } from "@/types/portfolio";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { useEthPrice } from "@/context/EthPriceContext";
-import { useCurrency } from "@/context/CurrencyContext";
-import { formatCurrency } from "@/lib/utils";
-import { useGasPrice } from "@/context/GasPriceContext";
+import Footer from "@/components/Footer";
 
 export default function PortfolioView({
   user,
@@ -28,9 +24,6 @@ export default function PortfolioView({
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredData, setFilteredData] = useState(data);
-  const { gasPrice } = useGasPrice();
-  const { ethPrice: globalEthPrice } = useEthPrice();
-  const { selectedCurrency: globalCurrency } = useCurrency();
 
   // Add this effect to update filteredData when data changes
   useEffect(() => {
@@ -86,115 +79,84 @@ export default function PortfolioView({
   };
 
   return (
-    <main className={`${containerClass} p-4`}>
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-bold">nftportfolio.app</h1>
-          <div className="flex space-x-4">
-            <button
-              onClick={() => router.push(`/portfolio/${user.ethAddress}`)}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg cursor-pointer"
-            >
-              Portfolio
-            </button>
-            <button
-              onClick={() => router.push(`/activity?id=${user.ethAddress}`)}
-              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg cursor-pointer"
-            >
-              Activity
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <UserProfile user={user} />
-
-      <PortfolioStats
-        data={data}
-        ethPrice={ethPrice}
-        totalNfts={totalNfts}
-        totalValue={totalValue}
-        selectedCurrency={selectedCurrency}
-      />
-
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6">
-        {/* Filters column - fixed width */}
-        <div>
-          <TableFilters
-            onApplyFilters={handleApplyFilters}
-            onClearFilters={handleClearFilters}
-          />
-        </div>
-
-        {/* Main content column - auto width */}
-        <div>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Your NFT Collection</CardTitle>
-              <div className="w-72">
-                <Input
-                  placeholder="Search NFTs..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {filteredData.length === 0 && data.length > 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <p className="text-muted-foreground mb-2">
-                    No collections found with the current filters
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Try adjusting your search term or filter criteria
-                  </p>
-                </div>
-              ) : (
-                <DataTable
-                  data={filteredData}
-                  ethPrice={ethPrice}
-                  totalValue={totalValue}
-                  selectedCurrency={selectedCurrency}
-                />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      <footer className="mt-8 text-sm text-muted-foreground flex flex-row gap-4">
-        <div className="flex-1 pr-4 flex flex-row gap-1 justify-end">
-          <div className="flex flex-row gap-1 font-bold items-center">
-            <div className="flex items-center justify-center">
-              <Image
-                src="/live-pulse.svg"
-                alt="live-pulse"
-                width={24}
-                height={24}
-              />
+    <div className="flex flex-col min-h-screen">
+      <main className={`${containerClass} p-4 flex-grow pb-20`}>
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <h1 className="text-4xl font-bold">nftportfolio.app</h1>
+            <div className="flex space-x-4">
+              <button
+                onClick={() => router.push(`/portfolio/${user.ethAddress}`)}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg cursor-pointer"
+              >
+                Portfolio
+              </button>
+              <button
+                onClick={() => router.push(`/activity?id=${user.ethAddress}`)}
+                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg cursor-pointer"
+              >
+                Activity
+              </button>
             </div>
-            <div className="flex items-center">Live</div>
           </div>
         </div>
 
-        <div className="flex-1 text-center">Made by Sami Zakir Ahmed</div>
+        <UserProfile user={user} />
 
-        <div className="flex-1 pl-4 flex flex-row gap-3 justify-start">
-          <div className="flex flex-row gap-2">
-            <Image
-              src="/ethereum-eth-logo.svg"
-              alt="Ethereum-logo"
-              width={12}
-              height={12}
+        <PortfolioStats
+          data={data}
+          ethPrice={ethPrice}
+          totalNfts={totalNfts}
+          totalValue={totalValue}
+          selectedCurrency={selectedCurrency}
+        />
+
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6">
+          {/* Filters column - fixed width */}
+          <div>
+            <TableFilters
+              onApplyFilters={handleApplyFilters}
+              onClearFilters={handleClearFilters}
             />
-            <div>
-              {globalCurrency.symbol} {formatCurrency(globalEthPrice)}
-            </div>
           </div>
-          <div>|</div>
-          <div>{`${gasPrice} GWEI`}</div>
+
+          {/* Main content column - auto width */}
+          <div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Your NFT Collection</CardTitle>
+                <div className="w-72">
+                  <Input
+                    placeholder="Search NFTs..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {filteredData.length === 0 && data.length > 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <p className="text-muted-foreground mb-2">
+                      No collections found with the current filters
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Try adjusting your search term or filter criteria
+                    </p>
+                  </div>
+                ) : (
+                  <DataTable
+                    data={filteredData}
+                    ethPrice={ethPrice}
+                    totalValue={totalValue}
+                    selectedCurrency={selectedCurrency}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </footer>
-    </main>
+      </main>
+      <Footer />
+    </div>
   );
 }

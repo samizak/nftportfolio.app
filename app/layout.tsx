@@ -51,7 +51,9 @@ export default function RootLayout({
                     </div>
                     <ThemeToggle />
                   </div>
-                  <div className="pt-16">{children}</div>
+                  <div className="min-h-screen overflow-x-hidden">
+                    {children}
+                  </div>
                   <Toaster position="top-right" />
                 </GasPriceProvider>
               </EthPriceProvider>
