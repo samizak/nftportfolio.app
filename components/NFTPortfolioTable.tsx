@@ -72,11 +72,15 @@ export default function NFTPortfolioTable({
     if (!data || data.length === 0) return [];
 
     const filtered = data
-      .filter(
-        (item) =>
+      .filter((item) => {
+        // When search is empty, show all items
+        if (!searchQuery) return true;
+
+        return (
           item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           item.collection?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+        );
+      })
       .map((item) => ({
         ...item,
         percentage: totalValue > 0 ? (item.total_value / totalValue) * 100 : 0,
@@ -228,7 +232,9 @@ export default function NFTPortfolioTable({
                   <div className="flex items-center gap-2 truncate">
                     <Avatar className="h-10 w-10 flex-shrink-0">
                       <img
-                        src={item.image_url || "https://placehold.co/100?text=NFT"}
+                        src={
+                          item.image_url || "https://placehold.co/100?text=NFT"
+                        }
                         alt={item.name || "Collection"}
                         onError={(e) => {
                           (e.target as HTMLImageElement).src =

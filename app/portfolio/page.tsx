@@ -60,7 +60,6 @@ export default function AddressPage() {
           const userJson = await userResponse.json();
 
           if (userJson.error) {
-            // console.warn("OpenSea profile not found:", userJson.error);
             setUserData({
               address: id,
               username:
@@ -68,9 +67,6 @@ export default function AddressPage() {
                 `${id.substring(0, 6)}...${id.substring(id.length - 4)}`,
               profile_image_url: "",
               banner_image_url: "",
-              website: "",
-              social_media_accounts: [],
-              bio: "",
               joined_date: "",
             });
           } else {
@@ -85,9 +81,6 @@ export default function AddressPage() {
               `${id.substring(0, 6)}...${id.substring(id.length - 4)}`,
             profile_image_url: "",
             banner_image_url: "",
-            website: "",
-            social_media_accounts: [],
-            bio: "",
             joined_date: "",
           });
         }
@@ -101,9 +94,6 @@ export default function AddressPage() {
             username: `${id.substring(0, 6)}...${id.substring(id.length - 4)}`,
             profile_image_url: "",
             banner_image_url: "",
-            website: "",
-            social_media_accounts: [],
-            bio: "",
             joined_date: "",
           });
           setEnsData({

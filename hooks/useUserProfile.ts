@@ -34,7 +34,9 @@ export function useUserProfile(id: string | null) {
 
         // Fetch user profile data
         try {
-          const userResponse = await fetchWithRetry(`/api/get-user-profile?id=${id}`);
+          const userResponse = await fetchWithRetry(
+            `/api/get-user-profile?id=${id}`
+          );
           if (!userResponse) return;
           const userJson = await userResponse.json();
 
@@ -78,7 +80,9 @@ export function useUserProfile(id: string | null) {
 // Helper functions
 function formatAddress(address: string | null): string {
   if (!address) return "";
-  return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  return `${address.substring(0, 6)}...${address.substring(
+    address.length - 4
+  )}`;
 }
 
 function createDefaultUserData(id: string, ens?: string) {

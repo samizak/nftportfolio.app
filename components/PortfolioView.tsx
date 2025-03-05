@@ -1,7 +1,6 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import NFTPortfolioTable from "@/components/NFTPortfolioTable";
 import PortfolioStats from "@/components/PortfolioStats";
 import UserProfile from "@/components/UserProfile";
 import { Input } from "@/components/ui/input";

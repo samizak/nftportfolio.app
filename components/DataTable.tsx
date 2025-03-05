@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2 } from "lucide-react";
 import Image from "next/image";
 import {
   Tooltip,
