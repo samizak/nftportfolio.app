@@ -6,20 +6,13 @@ import { useUser } from "@/context/UserContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import LoadingScreen from "@/components/LoadingScreen";
 import { Loader2 } from "lucide-react";
-
-interface CollectionData {
-  collection: string;
-  name: string;
-  quantity: number;
-  image_url: string;
-  is_verified: boolean;
-  floor_price?: number;
-  total_value?: number;
-}
+import { usePortfolioData } from "@/hooks/usePortfolioData";
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 export default function AddressPage() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
+  const { selectedCurrency } = useCurrency();
   const {
     userData,
     ensData,
@@ -29,240 +22,19 @@ export default function AddressPage() {
     setIsLoading,
     error,
     setError,
-  } = useUser() as any;
+  } = useUser();
 
-  const { selectedCurrency } = useCurrency();
+  // Use the new hook
+  const {
+    collections,
+    ethPrice,
+    totalNfts,
+    totalValue,
+    fetchingNFTs,
+    fetchProgress,
+  } = usePortfolioData(id);
 
-  const [collections, setCollections] = useState<CollectionData[]>([]);
-  const [ethPrice, setEthPrice] = useState<number>(0);
-  const [totalNfts, setTotalNfts] = useState<number>(0);
-  const [totalValue, setTotalValue] = useState<number>(0);
-  const [fetchingNFTs, setFetchingNFTs] = useState(false);
-  const [fetchProgress, setFetchProgress] = useState({
-    status: "Initializing...",
-    count: 0,
-    startTime: 0,
-  });
-  // First, let's add a utility function for retrying fetch operations
-  const fetchWithRetry = async (
-    url: string,
-    options?: RequestInit,
-    maxRetries = 3,
-    delay = 1000
-  ) => {
-    let retries = 0;
-
-    while (retries < maxRetries) {
-      try {
-        const response = await fetch(url, options);
-
-        // Special handling for user profile endpoint
-        if (url.includes("/api/get-user-profile")) {
-          // For 404 responses (address not found), don't retry
-          if (response.status === 404) {
-            console.log("User profile not found (404), skipping retries");
-            return response;
-          }
-
-          // For other responses, check if it contains the "not found" error message
-          if (!response.ok) {
-            const clonedResponse = response.clone();
-            try {
-              const data = await clonedResponse.json();
-              if (
-                data.error &&
-                (data.error.includes("not found") ||
-                  (data.details && data.details.includes("not found")))
-              ) {
-                console.log("User profile not found error, skipping retries");
-                return response;
-              }
-            } catch (e) {
-              // If we can't parse the JSON, continue with normal retry logic
-            }
-          }
-        }
-
-        if (!response.ok) {
-          throw new Error(`Network response was not ok: ${response.status}`);
-        }
-
-        return response;
-      } catch (error) {
-        retries++;
-        console.log(
-          `Attempt ${retries}/${maxRetries} failed. Retrying in ${delay}ms...`
-        );
-
-        if (retries >= maxRetries) {
-          throw error;
-        }
-
-        // Wait before retrying
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-
-    throw new Error("Failed to fetch after maximum retries");
-  };
-  // Update the ETH price fetch to use the retry mechanism
-  useEffect(() => {
-    (async () => {
-      try {
-        const response = await fetchWithRetry(`/api/fetch-ethereum-prices`);
-        const data = await response?.json();
-        setEthPrice(data.ethPrice[selectedCurrency.code.toLowerCase()]);
-      } catch (error) {
-        console.error("Error fetching ETH price:", error);
-      }
-    })();
-  }, [selectedCurrency]);
-  // In your fetchCollectionsAndInfo function
-  useEffect(() => {
-    const fetchCollectionsAndInfo = async () => {
-      try {
-        // Add loading state
-        setIsLoading(true);
-        setFetchingNFTs(true);
-        setFetchProgress({
-          status: "Initializing connection...",
-          count: 0,
-          startTime: Date.now(),
-        });
-
-        // Fetch NFTs with fewer API calls
-        let _collectionArray: any[] = [];
-        let _next = "";
-        let batchCount = 0;
-
-        do {
-          batchCount++;
-          setFetchProgress((prev) => ({
-            ...prev,
-            status: `Fetching NFTs (batch ${batchCount})...`,
-            count: _collectionArray.length,
-          }));
-
-          // Use the improved API that fetches multiple pages at once
-          const url = `/api/get-nft-by-account?address=${id}${
-            _next ? `&next=${_next}` : ""
-          }&maxPages=5`; // Fetch 5 pages at once (1000 NFTs)
-
-          // Use fetchWithRetry instead of regular fetch
-          const response = await fetchWithRetry(url);
-          const nftByAccountResponse = await response?.json();
-
-          if (nftByAccountResponse.nfts?.length) {
-            _collectionArray = [
-              ..._collectionArray,
-              ...nftByAccountResponse.nfts,
-            ];
-
-            setFetchProgress((prev) => ({
-              ...prev,
-              count: _collectionArray.length,
-            }));
-          }
-
-          _next = nftByAccountResponse.next || "";
-        } while (_next);
-
-        // Update total NFTs count
-        setTotalNfts(_collectionArray.length);
-        setFetchProgress((prev) => ({
-          ...prev,
-          status: "Processing collections...",
-          count: _collectionArray.length,
-        }));
-
-        // Calculate collection frequencies - optimized with reduce
-        const nftFreqMap = _collectionArray.reduce((acc, nft) => {
-          if (!nft.collection) return acc;
-          acc.set(nft.collection, (acc.get(nft.collection) || 0) + 1);
-          return acc;
-        }, new Map());
-
-        // Skip further processing if no collections found
-        if (nftFreqMap.size === 0) {
-          setCollections([]);
-          setTotalValue(0);
-          setIsLoading(false);
-          setFetchingNFTs(false);
-          return;
-        }
-
-        const nftData = Array.from(nftFreqMap, ([collection, count]) => ({
-          collection,
-          count,
-        }));
-
-        // Extract collection slugs and filter out any undefined/null values
-        const collectionSlugs = nftData
-          .map((item) => item.collection)
-          .filter(Boolean);
-
-        setFetchProgress((prev) => ({
-          ...prev,
-          status: `Fetching data for ${collectionSlugs.length} collections...`,
-        }));
-
-        // Use batch-collections API with error handling and retry
-        const batchResponse = await fetchWithRetry("/api/batch-collections", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ collections: collectionSlugs }),
-        });
-
-        const batchData = await batchResponse?.json();
-        const collectionsData = batchData.data || {};
-
-        // Process collection data - optimized with map and reduce
-        const collectionDetails = nftData.map((item) => {
-          const collectionSlug = item.collection;
-          const collectionInfo = collectionsData[collectionSlug]?.info || {};
-          const priceInfo = collectionsData[collectionSlug]?.price || {};
-          const floorPrice = priceInfo.floor_price || 0;
-
-          return {
-            collection: collectionSlug,
-            name: collectionInfo.name || collectionSlug,
-            quantity: item.count,
-            image_url: collectionInfo.image_url || "",
-            is_verified: collectionInfo.safelist_status === "verified",
-            floor_price: floorPrice,
-            total_value: floorPrice * item.count,
-          };
-        });
-
-        // Calculate total value in one pass
-        const totalPortfolioValue = collectionDetails.reduce(
-          (sum, item) => sum + (item.total_value || 0),
-          0
-        );
-
-        // Update state with all data at once
-        setTotalValue(totalPortfolioValue);
-        setCollections(collectionDetails);
-      } catch (error) {
-        console.error("Error fetching collection data:", error);
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Failed to fetch collection data"
-        );
-      } finally {
-        setIsLoading(false);
-        setFetchingNFTs(false);
-      }
-    };
-
-    if (id) {
-      fetchCollectionsAndInfo();
-    } else {
-      setIsLoading(false);
-    }
-  }, [id, setError, setIsLoading]);
-  // Also update the user profile and ENS data fetch
+  // Keep the user profile and ENS data fetch effect
   useEffect(() => {
     if (!id) {
       setError("No address provided");
@@ -275,56 +47,69 @@ export default function AddressPage() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch ENS data first
         const ensResponse = await fetchWithRetry(`/api/get-ens?id=${id}`);
-        const ensJson = await ensResponse?.json();
+        if (!ensResponse) return;
+        const ensJson = await ensResponse.json();
         setEnsData(ensJson);
 
-        // Then fetch user profile data
         try {
           const userResponse = await fetchWithRetry(
             `/api/get-user-profile?id=${id}`
           );
-          const userJson = await userResponse?.json();
+          if (!userResponse) return;
+          const userJson = await userResponse.json();
 
-          // Check if there's an error in the response
           if (userJson.error) {
-            console.warn("OpenSea profile not found:", userJson.error);
-            // Set minimal user data instead of failing
+            // console.warn("OpenSea profile not found:", userJson.error);
             setUserData({
               address: id,
               username:
                 ensJson?.ens ||
                 `${id.substring(0, 6)}...${id.substring(id.length - 4)}`,
               profile_image_url: "",
+              banner_image_url: "",
+              website: "",
+              social_media_accounts: [],
+              bio: "",
+              joined_date: "",
             });
           } else {
             setUserData(userJson);
           }
         } catch (userError) {
           console.warn("Error fetching user profile:", userError);
-          // Set minimal user data on error
           setUserData({
             address: id,
             username:
               ensJson?.ens ||
               `${id.substring(0, 6)}...${id.substring(id.length - 4)}`,
             profile_image_url: "",
+            banner_image_url: "",
+            website: "",
+            social_media_accounts: [],
+            bio: "",
+            joined_date: "",
           });
         }
       } catch (err) {
         console.error("Error in data fetching:", err);
-        // Only set error if it's not a "not found" error
         if (err instanceof Error && !err.message.includes("not found")) {
           setError(err.message || "An error occurred");
         } else {
-          // For "not found" errors, set minimal data
           setUserData({
             address: id,
             username: `${id.substring(0, 6)}...${id.substring(id.length - 4)}`,
             profile_image_url: "",
+            banner_image_url: "",
+            website: "",
+            social_media_accounts: [],
+            bio: "",
+            joined_date: "",
           });
-          setEnsData({ ens: "" });
+          setEnsData({
+            ens: "",
+            address: "",
+          });
         }
       } finally {
         setIsLoading(false);
@@ -333,6 +118,7 @@ export default function AddressPage() {
 
     fetchData();
   }, [id, setUserData, setEnsData, setIsLoading, setError]);
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -351,8 +137,8 @@ export default function AddressPage() {
       </div>
     );
   }
-  // Update the user object creation to handle missing data more gracefully
-  const user: any = {
+
+  const user = {
     name:
       userData?.username ||
       `${id?.substring(0, 6)}...${id?.substring(id?.length - 4) || ""}`,
@@ -361,6 +147,7 @@ export default function AddressPage() {
     avatar: userData?.profile_image_url || "",
     banner: userData?.banner_image_url || "",
   };
+
   return (
     <>
       {fetchingNFTs && (
