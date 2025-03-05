@@ -13,6 +13,12 @@ import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2 } from "lucide-react";
 import Image from "next/image";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CollectionData {
   collection: string;
@@ -146,7 +152,22 @@ export function DataTable({
                     <div className="flex items-center">
                       <span className="font-medium">{collection.name}</span>
                       {collection.is_verified && (
-                        <CheckCircle2 className="h-4 w-4 ml-1 text-blue-500" />
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Image
+                                className="inline-block cursor-pointer ml-1"
+                                src="/verified_checkmark.svg"
+                                alt="verified"
+                                width={18}
+                                height={18}
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Verified Collection</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                     <span className="text-xs text-gray-500 dark:text-gray-400">

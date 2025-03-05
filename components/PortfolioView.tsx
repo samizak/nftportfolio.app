@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import TableFilters from "@/components/TableFilters";
 import { DataTable } from "@/components/DataTable";
+import { containerClass } from "@/lib/utils";
 
 interface PortfolioViewProps {
   user: {
@@ -41,10 +42,11 @@ export default function PortfolioView({
     dataToFilter: any[] = data
   ) => {
     if (!searchTerm) return dataToFilter;
-    
-    return dataToFilter.filter((item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.collection.toLowerCase().includes(searchTerm.toLowerCase())
+
+    return dataToFilter.filter(
+      (item) =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.collection.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
 
@@ -90,7 +92,7 @@ export default function PortfolioView({
   };
 
   return (
-    <main className="container mx-auto p-4">
+    <main className={`${containerClass} p-4`}>
       <div className="mb-8">
         <h1 className="text-4xl font-bold">nftportfolio.app</h1>
       </div>
@@ -105,17 +107,17 @@ export default function PortfolioView({
         selectedCurrency={selectedCurrency}
       />
 
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Filters column */}
-        <div className="md:col-span-1">
-          <TableFilters 
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6">
+        {/* Filters column - fixed width */}
+        <div>
+          <TableFilters
             onApplyFilters={handleApplyFilters}
             onClearFilters={handleClearFilters}
           />
         </div>
 
-        {/* Main content column */}
-        <div className="md:col-span-3">
+        {/* Main content column - auto width */}
+        <div>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Your NFT Collection</CardTitle>

@@ -44,7 +44,7 @@ export default function TableFilters({
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full max-w-[300px] mx-auto md:mx-0">
       <CardHeader className="pb-3">
         <CardTitle className="text-md">Filter NFTs</CardTitle>
       </CardHeader>

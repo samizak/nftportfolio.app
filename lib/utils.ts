@@ -5,6 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export const containerClass = "max-w-[1800px] w-full mx-auto px-4";
+
 /**
  * Format a number as currency
  * @param amount The amount to format
