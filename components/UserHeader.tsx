@@ -53,6 +53,8 @@ export default function UserHeader() {
     fetchData();
   }, [pathname, setUserData, setEnsData, setIsLoading, setError]);
 
+  // console.log(userData);
+
   // If we have user data, show the profile menu
   if (userData && ensData) {
     const user = {
@@ -60,9 +62,10 @@ export default function UserHeader() {
       ethHandle: ensData.ens,
       ethAddress: userData.address,
       avatar: userData.profile_image_url || "https://placehold.co/400",
+      banner: userData.banner_image_url, // Ensure banner is defined even if empty
     };
 
-    return <ProfileMenu user={user} />;
+    // return <ProfileMenu user={user} />;
   }
 
   // Otherwise, don't show anything

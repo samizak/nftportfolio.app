@@ -42,7 +42,7 @@ export default function RootLayout({
         >
           <UserProvider>
             <CurrencyProvider>
-              <div className="fixed top-4 right-4 flex items-center gap-4 z-50">
+              <div className="fixed top-4 right-4 flex items-center gap-2 z-50">
                 <div className="mr-2">
                   <CurrencySelector />
                 </div>

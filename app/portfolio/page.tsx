@@ -359,6 +359,7 @@ export default function AddressPage() {
     ethHandle: ensData?.ens || "",
     ethAddress: userData?.address || id || "",
     avatar: userData?.profile_image_url || "",
+    banner: userData?.banner_image_url || "",
   };
   return (
     <>

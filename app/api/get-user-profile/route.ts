@@ -102,8 +102,7 @@ export async function GET(req: any, res: any) {
   try {
     // Use the retry mechanism - make sure it returns a response
     const result = await fetchWithRetry(openseaUrl, fetchOptions, 3, 1000);
-
-    console.log(result);
+    // console.log(result);
 
     // Handle 400 error case (address not found)
     if (result.status === 404) {

@@ -18,6 +18,7 @@ interface ProfileMenuProps {
     ethHandle: string;
     ethAddress: string;
     avatar: string;
+    banner: string;
   };
 }
 

@@ -13,6 +13,7 @@ interface PortfolioViewProps {
     ethHandle: string;
     ethAddress: string;
     avatar: string;
+    banner: string;
   };
   data?: any[];
   ethPrice?: number;
