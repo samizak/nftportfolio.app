@@ -10,6 +10,7 @@ import { DataTable } from "@/components/DataTable";
 import { containerClass } from "@/lib/utils";
 import { PortfolioViewProps } from "@/types/portfolio";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function PortfolioView({
   user,
@@ -19,6 +20,7 @@ export default function PortfolioView({
   totalValue = 0,
   selectedCurrency = { code: "USD", symbol: "$" },
 }: PortfolioViewProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredData, setFilteredData] = useState(data);
 
@@ -85,7 +87,23 @@ export default function PortfolioView({
   return (
     <main className={`${containerClass} p-4`}>
       <div className="mb-8">
-        <h1 className="text-4xl font-bold">nftportfolio.app</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-4xl font-bold">nftportfolio.app</h1>
+          <div className="flex space-x-4">
+            <button
+              onClick={() => router.push(`/portfolio/${user.ethAddress}`)}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg cursor-pointer"
+            >
+              Portfolio
+            </button>
+            <button
+              onClick={() => router.push(`/activity?id=${user.ethAddress}`)}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg cursor-pointer"
+            >
+              Activity
+            </button>
+          </div>
+        </div>
       </div>
 
       <UserProfile user={user} />
@@ -143,8 +161,18 @@ export default function PortfolioView({
         </div>
       </div>
 
-      <footer className="mt-8 text-center text-sm text-muted-foreground">
-        Made by Sami Zakir Ahmed
+      <footer className="mt-8 text-sm text-muted-foreground flex flex-row gap-4">
+        <div className="flex-1 border text-right pr-4">Live</div>
+
+        <div className="flex-1 border text-center">
+          Made by Sami Zakir Ahmed
+        </div>
+
+        <div className="flex-1 border text-left pl-4 flex flex-row gap-3">
+          <div>eth price</div>
+          <div>|</div>
+          <div>gas price</div>
+        </div>
       </footer>
     </main>
   );
