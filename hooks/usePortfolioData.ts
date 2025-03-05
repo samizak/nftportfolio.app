@@ -2,16 +2,7 @@ import { useState, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { fetchWithRetry } from "../lib/fetchWithRetry";
-
-interface CollectionData {
-  collection: string;
-  name: string;
-  quantity: number;
-  image_url: string;
-  is_verified: boolean;
-  floor_price?: number;
-  total_value?: number;
-}
+import { CollectionData } from "@/types/nft";
 
 export function usePortfolioData(id: string | null) {
   const { selectedCurrency } = useCurrency();

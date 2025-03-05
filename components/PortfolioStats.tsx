@@ -10,24 +10,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatDollarValue, formatThousandSeparator } from "@/utils/formatters";
-
-interface PortfolioStatsProps {
-  data?: any[];
-  ethPrice?: number;
-  totalNfts?: number;
-  totalValue?: number;
-  selectedCurrency?: { code: string; symbol: string };
-}
-
-interface CollectionData {
-  collection: string;
-  name: string;
-  quantity: number;
-  image_url: string;
-  is_verified: boolean;
-  floor_price?: number;
-  total_value?: number;
-}
+import { CollectionData } from "@/types/nft";
+import { PortfolioStatsProps } from "@/types/portfolio";
 
 export default function PortfolioStats({
   data = [],
