@@ -11,6 +11,11 @@ import { containerClass } from "@/lib/utils";
 import { PortfolioViewProps } from "@/types/portfolio";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { useEthPrice } from "@/context/EthPriceContext";
+import { useCurrency } from "@/context/CurrencyContext";
+import { formatCurrency } from "@/lib/utils";
+import { useGasPrice } from "@/context/GasPriceContext";
 
 export default function PortfolioView({
   user,
@@ -23,38 +28,36 @@ export default function PortfolioView({
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredData, setFilteredData] = useState(data);
+  const { gasPrice } = useGasPrice();
+  const { ethPrice: globalEthPrice } = useEthPrice();
+  const { selectedCurrency: globalCurrency } = useCurrency();
 
   // Add this effect to update filteredData when data changes
   useEffect(() => {
     setFilteredData(applySearchAndFilters(searchQuery, data));
   }, [data]);
-
   // Apply both search and filters
   const applySearchAndFilters = (
     searchTerm: string,
     dataToFilter: any[] = data
   ) => {
     if (!searchTerm) return dataToFilter;
-
     return dataToFilter.filter(
       (item) =>
         item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.collection?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
-
   // Handle search input changes
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
     setFilteredData(applySearchAndFilters(query));
   };
-
   // Handle filter application
   const handleApplyFilters = (field: string, min: string, max: string) => {
     const minValue = min === "" ? -Infinity : parseFloat(min);
     const maxValue = max === "" ? Infinity : parseFloat(max);
-
     const filtered = data.filter((item: any) => {
       let value;
       switch (field) {
@@ -75,11 +78,9 @@ export default function PortfolioView({
       }
       return value >= minValue && value <= maxValue;
     });
-
     setFilteredData(applySearchAndFilters(searchQuery, filtered));
   };
-
-  // Clear all filters
+  // Add the missing handleClearFilters function
   const handleClearFilters = () => {
     setFilteredData(applySearchAndFilters(searchQuery));
   };
@@ -162,16 +163,36 @@ export default function PortfolioView({
       </div>
 
       <footer className="mt-8 text-sm text-muted-foreground flex flex-row gap-4">
-        <div className="flex-1 border text-right pr-4">Live</div>
-
-        <div className="flex-1 border text-center">
-          Made by Sami Zakir Ahmed
+        <div className="flex-1 pr-4 flex flex-row gap-1 justify-end">
+          <div className="flex flex-row gap-1 font-bold items-center">
+            <div className="flex items-center justify-center">
+              <Image
+                src="/live-pulse.svg"
+                alt="live-pulse"
+                width={24}
+                height={24}
+              />
+            </div>
+            <div className="flex items-center">Live</div>
+          </div>
         </div>
 
-        <div className="flex-1 border text-left pl-4 flex flex-row gap-3">
-          <div>eth price</div>
+        <div className="flex-1 text-center">Made by Sami Zakir Ahmed</div>
+
+        <div className="flex-1 pl-4 flex flex-row gap-3 justify-start">
+          <div className="flex flex-row gap-2">
+            <Image
+              src="/ethereum-eth-logo.svg"
+              alt="Ethereum-logo"
+              width={12}
+              height={12}
+            />
+            <div>
+              {globalCurrency.symbol} {formatCurrency(globalEthPrice)}
+            </div>
+          </div>
           <div>|</div>
-          <div>gas price</div>
+          <div>{`${gasPrice} GWEI`}</div>
         </div>
       </footer>
     </main>

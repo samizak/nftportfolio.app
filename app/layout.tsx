@@ -6,6 +6,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import CurrencySelector from "@/components/CurrencySelector";
 import { UserProvider } from "@/context/UserContext";
 import { CurrencyProvider } from "@/context/CurrencyContext";
+import { EthPriceProvider } from "@/context/EthPriceContext";
+import { GasPriceProvider } from "@/context/GasPriceContext";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -41,14 +43,18 @@ export default function RootLayout({
         >
           <UserProvider>
             <CurrencyProvider>
-              <div className="fixed top-4 right-4 flex items-center gap-2 z-50">
-                <div className="mr-2">
-                  <CurrencySelector />
-                </div>
-                <ThemeToggle />
-              </div>
-              <div className="pt-16">{children}</div>
-              <Toaster position="top-right" />
+              <EthPriceProvider>
+                <GasPriceProvider>
+                  <div className="fixed top-4 right-4 flex items-center gap-2 z-50">
+                    <div className="mr-2">
+                      <CurrencySelector />
+                    </div>
+                    <ThemeToggle />
+                  </div>
+                  <div className="pt-16">{children}</div>
+                  <Toaster position="top-right" />
+                </GasPriceProvider>
+              </EthPriceProvider>
             </CurrencyProvider>
           </UserProvider>
         </ThemeProvider>
