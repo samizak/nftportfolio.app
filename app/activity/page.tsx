@@ -132,6 +132,8 @@ export default function ActivityPage() {
         throw new Error(data.error);
       }
 
+      // console.log(data[6]);
+
       const formattedEvents: ActivityEvent[] = data.map((event: any) => ({
         id:
           event.transaction?.hash ||
@@ -142,16 +144,15 @@ export default function ActivityPage() {
         nft: {
           identifier: event.nft?.identifier,
           name: event.nft?.name,
+          collection: event.nft?.collection,
           image_url: event.nft?.image_url,
           display_image_url: event.nft?.display_image_url,
-          collection: {
-            name: event.nft?.collection?.name,
-            image_url: event.nft?.collection?.image_url,
-          },
         },
         payment: {
-          quantity: event.nft?.price?.current?.value?.toString() || "0",
-          symbol: event.nft?.price?.current?.currency || "ETH",
+          quantity: event?.payment?.quantity,
+          token_address: event?.payment?.token_address,
+          decimals: event?.payment?.decimals,
+          symbol: event?.payment?.symbol,
         },
         from_account: {
           address:
@@ -220,10 +221,10 @@ export default function ActivityPage() {
         {loading ? (
           <ActivitySkeleton />
         ) : (
-          <div className="rounded-md border shadow-sm">
+          <div className="rounded-lg border shadow-md overflow-hidden">
             {events.length === 0 ? (
-              <div className="text-center py-12 bg-muted/20 rounded-lg border border-muted">
-                <p className="text-muted-foreground mb-2 text-lg">
+              <div className="text-center py-16 bg-muted/20 rounded-lg border border-muted">
+                <p className="text-muted-foreground mb-3 text-xl font-medium">
                   No activity found for this wallet
                 </p>
                 <p className="text-sm text-muted-foreground">
@@ -231,7 +232,9 @@ export default function ActivityPage() {
                 </p>
               </div>
             ) : (
-              <ActivityTable events={events} />
+              <div className="overflow-x-auto">
+                <ActivityTable events={events} />
+              </div>
             )}
           </div>
         )}

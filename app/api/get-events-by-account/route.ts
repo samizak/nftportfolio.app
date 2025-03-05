@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
         to_address: e.to_address,
         quantity: e.quantity,
         nft: e.nft,
+        payment: e.payment,
         timestamp: e.event_timestamp,
       };
     });
