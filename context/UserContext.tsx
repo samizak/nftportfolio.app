@@ -1,22 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode } from "react";
-
-type UserProfile = {
-  address: string;
-  username: string;
-  profile_image_url: string;
-  banner_image_url: string;
-  website: string;
-  social_media_accounts: string[];
-  bio: string;
-  joined_date: string;
-};
-
-type EnsData = {
-  address: string;
-  ens: string;
-};
+import { UserProfile, EnsData } from "@/types/user";
 
 type UserContextType = {
   userData: UserProfile | null;

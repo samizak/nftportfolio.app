@@ -14,10 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilterX } from "lucide-react";
 
-interface FilterValues {
-  min: string;
-  max: string;
-}
+import { FilterValues } from "@/types/nft";
 
 interface TableFiltersProps {
   onApplyFilters: (field: string, min: string, max: string) => void;
