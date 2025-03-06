@@ -2,28 +2,50 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import UserProfile from "@/components/UserProfile";
-import Footer from "@/components/Footer";
-import Header from "@/components/Header";
-import { containerClass } from "@/lib/utils";
 import { fetchWithRetry } from "@/lib/fetchWithRetry";
 import { useUser } from "@/context/UserContext";
-import ActivityTable, {
-  ActivityEvent,
-} from "@/components/activity/ActivityTable";
-import ActivitySkeleton from "@/components/activity/ActivitySkeleton";
+import { ActivityEvent } from "@/components/activity/ActivityTable";
 import { useRouter } from "next/navigation";
 import { isAddress } from "ethers";
+import ActivityView from "@/components/ActivityView";
+import LoadingScreen from "@/components/LoadingScreen";
+import { usePortfolioData } from "@/hooks/usePortfolioData";
+import { Loader2 } from "lucide-react";
 
 export default function ActivityPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const walletId = searchParams.get("id") || "";
+  const id = searchParams.get("id");
   const [isValidAddress, setIsValidAddress] = useState<boolean | null>(null);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState({
+    message: "Initializing...",
+    percentage: 0,
+    currentPage: 0,
+    totalPages: 0,
+  });
+
+  // Add validation for Ethereum address
+  useEffect(() => {
+    // Check if id exists and is a valid Ethereum address or ENS name
+    if (id) {
+      const isEthAddress = isAddress(id);
+      const isEnsName = id?.toLowerCase().endsWith(".eth");
+
+      if (!isEthAddress && !isEnsName) {
+        console.warn("Invalid Ethereum address or ENS name:", id);
+        setIsValidAddress(false);
+        router.push("/");
+      } else {
+        setIsValidAddress(true);
+      }
+    } else {
+      setIsValidAddress(false);
+      router.push("/");
+    }
+  }, [id, router]);
 
   const {
     userData,
@@ -37,12 +59,12 @@ export default function ActivityPage() {
 
   // Add validation for Ethereum address
   useEffect(() => {
-    if (walletId) {
-      const isEthAddress = isAddress(walletId);
-      const isEnsName = walletId.toLowerCase().endsWith(".eth");
+    if (id) {
+      const isEthAddress = isAddress(id);
+      const isEnsName = id.toLowerCase().endsWith(".eth");
 
       if (!isEthAddress && !isEnsName) {
-        console.warn("Invalid Ethereum address or ENS name:", walletId);
+        console.warn("Invalid Ethereum address or ENS name:", id);
         setIsValidAddress(false);
         router.push("/");
         return;
@@ -52,17 +74,26 @@ export default function ActivityPage() {
       setIsValidAddress(false);
       router.push("/");
     }
-  }, [walletId, router]);
+  }, [id, router]);
 
   // Modify the existing useEffect to only run if address is valid
   useEffect(() => {
-    if (!walletId || !isValidAddress) {
+    if (!id || !isValidAddress) {
       return;
     }
 
     fetchUserData();
     fetchActivity();
-  }, [walletId, isValidAddress]);
+  }, [id, isValidAddress]);
+
+  const {
+    collections,
+    ethPrice,
+    totalNfts,
+    totalValue,
+    fetchingNFTs,
+    fetchProgress,
+  } = usePortfolioData(isValidAddress ? id : null);
 
   const fetchUserData = async () => {
     try {
@@ -70,7 +101,7 @@ export default function ActivityPage() {
       setUserError(null);
 
       // Fetch ENS data
-      const ensResponse = await fetchWithRetry(`/api/get-ens?id=${walletId}`);
+      const ensResponse = await fetchWithRetry(`/api/get-ens?id=${id}`);
       if (!ensResponse) {
         console.error("No ENS response received");
         setUserError("Failed to fetch ENS data");
@@ -83,7 +114,7 @@ export default function ActivityPage() {
 
       try {
         const userResponse = await fetchWithRetry(
-          `/api/get-user-profile?id=${walletId}`
+          `/api/get-user-profile?id=${id}`
         );
         if (!userResponse) {
           console.error("No user profile response received");
@@ -96,12 +127,10 @@ export default function ActivityPage() {
 
         if (userJson.error) {
           setUserData({
-            address: walletId,
+            address: id || "",
             username:
               ensJson?.ens ||
-              `${walletId.substring(0, 6)}...${walletId.substring(
-                walletId.length - 4
-              )}`,
+              `${id?.substring(0, 6)}...${id?.substring(id.length - 4)}`,
             profile_image_url: "",
             banner_image_url: "",
             joined_date: "",
@@ -112,12 +141,10 @@ export default function ActivityPage() {
       } catch (userError) {
         console.warn("Error fetching user profile:", userError);
         setUserData({
-          address: walletId,
+          address: id || "",
           username:
             ensJson?.ens ||
-            `${walletId.substring(0, 6)}...${walletId.substring(
-              walletId.length - 4
-            )}`,
+            `${id?.substring(0, 6)}...${id?.substring(id.length - 4)}`,
           profile_image_url: "",
           banner_image_url: "",
           joined_date: "",
@@ -129,10 +156,8 @@ export default function ActivityPage() {
         setUserError(err.message || "An error occurred");
       } else {
         setUserData({
-          address: walletId,
-          username: `${walletId.substring(0, 6)}...${walletId.substring(
-            walletId.length - 4
-          )}`,
+          address: id || "",
+          username: `${id?.substring(0, 6)}...${id?.substring(id.length - 4)}`,
           profile_image_url: "",
           banner_image_url: "",
           joined_date: "",
@@ -148,16 +173,21 @@ export default function ActivityPage() {
   };
 
   // In your activity page or component where you fetch events
-
   const fetchActivity = async () => {
     setLoading(true);
     setError(null);
     setEvents([]);
+    setLoadingProgress({
+      message: "Connecting to data source...",
+      percentage: 0,
+      currentPage: 0,
+      totalPages: 20, // Initial estimate
+    });
 
     try {
       // Create SSE connection
       const eventSource = new EventSource(
-        `/api/get-events-by-account?address=${walletId}&maxPages=20`
+        `/api/get-events-by-account?address=${id}&maxPages=20`
       );
 
       // Handle incoming events
@@ -168,6 +198,12 @@ export default function ActivityPage() {
           case "progress":
             // Update loading state with progress info
             console.log(`Loading: ${data.message}`);
+            setLoadingProgress((prev) => ({
+              message: data.message || prev.message,
+              percentage: data.percentage || prev.percentage,
+              currentPage: data.currentPage || prev.currentPage,
+              totalPages: data.totalPages || prev.totalPages,
+            }));
             break;
 
           case "chunk":
@@ -219,59 +255,32 @@ export default function ActivityPage() {
   const user = {
     name:
       userData?.username ||
-      `${walletId?.substring(0, 6)}...${
-        walletId?.substring(walletId?.length - 4) || ""
-      }`,
+      `${id?.substring(0, 6)}...${id?.substring(id?.length - 4) || ""}`,
     ethHandle: ensData?.ens || "",
-    ethAddress: userData?.address || walletId || "",
+    ethAddress: userData?.address || id || "",
     avatar: userData?.profile_image_url || "",
     banner: userData?.banner_image_url || "",
   };
-
   return (
-    <div className="flex flex-col min-h-screen">
-      <main className={`${containerClass} p-4 flex-grow pb-20`}>
-        <Header user={user} activePage="activity" />
+    <>
+      {fetchingNFTs && (
+        <LoadingScreen
+          status={fetchProgress.status}
+          count={fetchProgress.count}
+          startTime={fetchProgress.startTime}
+        />
+      )}
 
-        {isLoading || !userData || !ensData ? (
-          <div className="rounded-md border p-8 mb-8">
-            <div className="flex flex-col items-center justify-center space-y-4">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <p>Loading user profile...</p>
-            </div>
+      {isLoading || !userData || !ensData ? (
+        <div className="fixed inset-0 flex items-center justify-center">
+          <div className="flex flex-col items-center space-y-3">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span>Loading profile data...</span>
           </div>
-        ) : (
-          <UserProfile user={user} />
-        )}
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6 text-center shadow-sm">
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <ActivitySkeleton />
-        ) : (
-          <div className="overflow-hidden">
-            {events.length === 0 ? (
-              <div className="text-center py-16 bg-muted/20 rounded-lg border border-muted">
-                <p className="text-muted-foreground mb-3 text-xl font-medium">
-                  No activity found for this wallet
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Try checking another wallet or come back later
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <ActivityTable events={events} />
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-      <Footer />
-    </div>
+        </div>
+      ) : (
+        <ActivityView user={user} events={events} />
+      )}
+    </>
   );
 }

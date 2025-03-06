@@ -168,7 +168,7 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                               ? "Listed for Sale"
                               : event.event_type === "offer"
                               ? "Offer Received"
-                              : event.event_type === "cancel_list"
+                              : event.event_type === "cancel"
                               ? "Listing Cancelled"
                               : event.event_type === "cancel_offer"
                               ? "Offer Cancelled"
@@ -244,50 +244,54 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                     <Badge variant="outline">{event.quantity || 1}</Badge>
                   </TableCell>
                   <TableCell className="py-5 font-medium">
-                    <div className="flex items-center space-x-1.5">
-                      <span className="bg-muted/30 px-3 py-1.5 rounded text-sm truncate max-w-[180px]">
-                        {event.from_account.address !==
-                        "0x0000000000000000000000000000000000000000"
-                          ? `${event.from_account.address.substring(
-                              0,
-                              12
-                            )}...${event.from_account.address.substring(
-                              event.from_account.address.length - 4
-                            )}`
-                          : "Null Address"}
-                      </span>
-                      <a
-                        href={`https://opensea.io/${event.from_account.address}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:text-blue-700"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    </div>
+                    {event.from_account.address && (
+                      <div className="flex items-center space-x-1.5">
+                        <span className="bg-muted/30 px-3 py-1.5 rounded text-sm truncate max-w-[180px]">
+                          {event.from_account.address !==
+                          "0x0000000000000000000000000000000000000000"
+                            ? `${event.from_account.address.substring(
+                                0,
+                                12
+                              )}...${event.from_account.address.substring(
+                                event.from_account.address.length - 4
+                              )}`
+                            : "Null Address"}
+                        </span>
+                        <a
+                          href={`https://opensea.io/${event.from_account.address}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="py-4 font-medium">
-                    <div className="flex items-center space-x-1">
-                      <span className="bg-muted/30 px-2 py-1 rounded text-sm truncate max-w-[180px]">
-                        {event.to_account.address !==
-                        "0x0000000000000000000000000000000000000000"
-                          ? `${event.to_account.address.substring(
-                              0,
-                              12
-                            )}...${event.to_account.address.substring(
-                              event.to_account.address.length - 4
-                            )}`
-                          : "Null Address"}
-                      </span>
-                      <a
-                        href={`https://opensea.io/${event.to_account.address}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:text-blue-700"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </div>
+                    {event.to_account.address && (
+                      <div className="flex items-center space-x-1">
+                        <span className="bg-muted/30 px-2 py-1 rounded text-sm truncate max-w-[180px]">
+                          {event.to_account.address !==
+                          "0x0000000000000000000000000000000000000000"
+                            ? `${event.to_account.address.substring(
+                                0,
+                                12
+                              )}...${event.to_account.address.substring(
+                                event.to_account.address.length - 4
+                              )}`
+                            : "Null Address"}
+                        </span>
+                        <a
+                          href={`https://opensea.io/${event.to_account.address}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="py-4 font-medium">
                     {event.transaction && (

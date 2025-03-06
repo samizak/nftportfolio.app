@@ -105,6 +105,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Separate function to send cached data
+// In the sendCachedData function, improve the progress message
 async function sendCachedData(
   writer: WritableStreamDefaultWriter,
   events: any[],
@@ -113,13 +114,16 @@ async function sendCachedData(
   try {
     console.log("Starting to send cached data");
 
-    // Send progress message
+    // Send progress message with more details
     await writer.write(
       encoder.encode(
         `data: ${JSON.stringify({
           type: "progress",
           message: "Fetching data from cache...",
           pageCount: 0,
+          currentPage: 0,
+          totalPages: 1,
+          percentage: 0
         })}\n\n`
       )
     );
@@ -167,6 +171,7 @@ async function sendCachedData(
     console.log("Writer closed");
   }
 }
+// In the fetchAllEvents function, enhance the progress updates
 async function fetchAllEvents(
   walletAddress: string,
   maxPages: number,
@@ -176,8 +181,23 @@ async function fetchAllEvents(
   let nextCursor: string | null = null;
   let pageCount = 0;
   let totalEvents = 0;
+  const startTime = Date.now();
 
   try {
+    // Initial progress message with estimated total pages
+    await writer.write(
+      encoder.encode(
+        `data: ${JSON.stringify({
+          type: "progress",
+          message: "Initializing data fetch...",
+          currentPage: 0,
+          totalPages: maxPages, // Initial estimate
+          percentage: 0,
+          startTime
+        })}\n\n`
+      )
+    );
+
     do {
       // Build URL with cursor if available
       let url = `https://api.opensea.io/api/v2/events/accounts/${walletAddress}?chain=ethereum&event_type=sale&event_type=cancel&event_type=transfer&limit=50`;
@@ -185,13 +205,21 @@ async function fetchAllEvents(
         url += `&next=${nextCursor}`;
       }
 
-      // Send progress update
+      // Calculate percentage based on current progress
+      const percentage = Math.min(Math.round((pageCount / maxPages) * 100), 99);
+      
+      // Send enhanced progress update
       await writer.write(
         encoder.encode(
           `data: ${JSON.stringify({
             type: "progress",
-            message: `Fetching page ${pageCount + 1}...`,
+            message: `Fetching page ${pageCount + 1} of ~${maxPages}...`,
             pageCount,
+            currentPage: pageCount + 1,
+            totalPages: maxPages,
+            percentage,
+            totalEventsSoFar: totalEvents,
+            elapsedTime: Date.now() - startTime
           })}\n\n`
         )
       );
@@ -211,13 +239,20 @@ async function fetchAllEvents(
 
         if (response.status === 429) {
           retryCount++;
-          // Notify client about rate limiting and retry
+          // Enhanced rate limit notification
           await writer.write(
             encoder.encode(
               `data: ${JSON.stringify({
                 type: "progress",
                 message: `Rate limited. Retry attempt ${retryCount}/5 after 5 seconds...`,
                 pageCount,
+                currentPage: pageCount + 1,
+                totalPages: maxPages,
+                percentage,
+                isRateLimited: true,
+                retryCount,
+                totalEventsSoFar: totalEvents,
+                elapsedTime: Date.now() - startTime
               })}\n\n`
             )
           );
@@ -332,7 +367,11 @@ async function fetchAllEvents(
         } events for wallet ${walletAddress} (page ${pageCount + 1})`
       );
       totalEvents += events.length;
-      // Send chunk of events to client
+      
+      // Calculate updated percentage after processing this page
+      const updatedPercentage = Math.min(Math.round(((pageCount + 1) / maxPages) * 100), 99);
+      
+      // Send chunk of events to client with updated progress info
       await writer.write(
         encoder.encode(
           `data: ${JSON.stringify({
@@ -340,6 +379,10 @@ async function fetchAllEvents(
             events,
             pageCount: pageCount + 1,
             totalEvents,
+            currentPage: pageCount + 1,
+            totalPages: maxPages,
+            percentage: updatedPercentage,
+            elapsedTime: Date.now() - startTime
           })}\n\n`
         )
       );
@@ -350,17 +393,16 @@ async function fetchAllEvents(
       await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 500ms
       // Stop if we've reached max pages or there's no next cursor
     } while (nextCursor && nextCursor !== "" && pageCount < maxPages);
-    // Send completion message
+    // Send completion message with final stats
     await writer.write(
       encoder.encode(
         `data: ${JSON.stringify({
           type: "complete",
           totalPages: pageCount,
           totalEvents,
-          // maxPages: maxPages, // DEBUGGING: Return maxPages from url parameter
-          // next: nextCursor, // DEBUGGING: Return nextCursor
-          hasMore:
-            pageCount >= maxPages && nextCursor !== null && nextCursor !== "",
+          hasMore: pageCount >= maxPages && nextCursor !== null && nextCursor !== "",
+          percentage: 100,
+          elapsedTime: Date.now() - startTime
         })}\n\n`
       )
     );
