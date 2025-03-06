@@ -13,7 +13,7 @@ export default function Footer() {
   const { selectedCurrency } = useCurrency();
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 w-full py-2 bg-background/90 backdrop-blur-sm border-t text-sm text-muted-foreground z-[60]">
+    <footer className="fixed bottom-0 left-0 right-0 w-full py-2 bg-background/80 backdrop-blur-sm border-t text-sm text-muted-foreground z-[60]">
       <div
         className={`${containerClass} mx-auto flex items-center justify-between px-4`}
       >
@@ -31,6 +31,30 @@ export default function Footer() {
             </div>
             <span>Live</span>
           </div>
+        </div>
+        <div className="text-center font-medium">
+          Made by <span className="text-primary">Sami Zakir Ahmed</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 transition-colors hover:text-foreground">
+            <Image
+              src="/ethereum-eth-logo.svg"
+              alt="Ethereum-logo"
+              width={12}
+              height={12}
+              style={{ height: "auto" }}
+            />
+            <span>
+              {formatCurrency(
+                ethPrice,
+                selectedCurrency.code,
+                selectedCurrency.symbol
+              )}
+            </span>
+          </div>
+          <div className="text-border/60">|</div>
+          <div className="transition-colors hover:text-foreground">{`${gasPrice} GWEI`}</div>
         </div>
       </div>
     </footer>
