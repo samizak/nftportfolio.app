@@ -39,8 +39,8 @@ export default function ActivityPage() {
   useEffect(() => {
     if (walletId) {
       const isEthAddress = isAddress(walletId);
-      const isEnsName = walletId.toLowerCase().endsWith('.eth');
-      
+      const isEnsName = walletId.toLowerCase().endsWith(".eth");
+
       if (!isEthAddress && !isEnsName) {
         console.warn("Invalid Ethereum address or ENS name:", walletId);
         setIsValidAddress(false);
@@ -77,7 +77,7 @@ export default function ActivityPage() {
         setIsLoading(false);
         return;
       }
-      
+
       const ensJson = await ensResponse.json();
       setEnsData(ensJson);
 
@@ -91,7 +91,7 @@ export default function ActivityPage() {
           setIsLoading(false);
           return;
         }
-        
+
         const userJson = await userResponse.json();
 
         if (userJson.error) {
@@ -147,69 +147,108 @@ export default function ActivityPage() {
     }
   };
 
+  // In your activity page or component where you fetch events
+
   const fetchActivity = async () => {
     setLoading(true);
     setError(null);
+    setEvents([]);
 
     try {
-      console.log("Fetching activity data for:", walletId);
-      const response = await fetchWithRetry(
-        `/api/get-events-by-account?address=${walletId}`
+      // Create SSE connection
+      const eventSource = new EventSource(
+        `/api/get-events-by-account?address=${walletId}&maxPages=5`
       );
 
-      if (!response) {
-        throw new Error("Failed to fetch activity data");
-      }
+      // Handle incoming events
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
 
-      const data = await response.json();
+        switch (data.type) {
+          case "progress":
+            // Update loading state with progress info
+            console.log(`Loading: ${data.message}`);
+            break;
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
+          case "chunk":
+            // Append new events to the existing list
+            setEvents((currentEvents) => {
+              const formattedEvents = data.events.map((event: any) => ({
+                id:
+                  event.transaction?.hash ||
+                  `event-${Math.random().toString(36).substring(2, 9)}`,
+                event_type: event.event_type,
+                created_date: new Date(event.timestamp * 1000),
+                transaction: event.transaction,
+                nft: {
+                  identifier: event.nft?.identifier,
+                  name: event.nft?.name,
+                  collection: event.nft?.collection,
+                  image_url: event.nft?.image_url,
+                  display_image_url: event.nft?.display_image_url,
+                  contract: event.nft?.contract,
+                },
+                payment: {
+                  quantity: event?.payment?.quantity,
+                  token_address: event?.payment?.token_address,
+                  decimals: event?.payment?.decimals,
+                  symbol: event?.payment?.symbol,
+                },
+                from_account: {
+                  address:
+                    event.from_address ||
+                    "0x0000000000000000000000000000000000000000",
+                  user: event.from_account?.user,
+                },
+                to_account: {
+                  address:
+                    event.to_address ||
+                    "0x0000000000000000000000000000000000000000",
+                  user: event.to_account?.user,
+                },
+                quantity: parseInt(event.quantity) || 1,
+              }));
 
-      const formattedEvents: ActivityEvent[] = data.map((event: any) => ({
-        id:
-          event.transaction?.hash ||
-          `event-${Math.random().toString(36).substring(2, 9)}`,
-        event_type: event.event_type,
-        created_date: new Date(event.timestamp * 1000),
-        transaction: event.transaction,
-        nft: {
-          identifier: event.nft?.identifier,
-          name: event.nft?.name,
-          collection: event.nft?.collection,
-          image_url: event.nft?.image_url,
-          display_image_url: event.nft?.display_image_url,
-          contract: event.nft?.contract,
-        },
-        payment: {
-          quantity: event?.payment?.quantity,
-          token_address: event?.payment?.token_address,
-          decimals: event?.payment?.decimals,
-          symbol: event?.payment?.symbol,
-        },
-        from_account: {
-          address:
-            event.from_address || "0x0000000000000000000000000000000000000000",
-          user: event.from_account?.user,
-        },
-        to_account: {
-          address:
-            event.to_address || "0x0000000000000000000000000000000000000000",
-          user: event.to_account?.user,
-        },
-        quantity: parseInt(event.quantity) || 1,
-      }));
+              return [...currentEvents, ...formattedEvents];
+            });
+            break;
 
-      setEvents(formattedEvents);
+          case "complete":
+            // All data has been received
+            setLoading(false);
+            console.log(
+              `Completed: ${data.totalEvents} events across ${data.totalPages} pages`
+            );
+            eventSource.close();
+            break;
+
+          case "error":
+            // Handle errors
+            setError(data.error || "An error occurred while fetching data");
+            setLoading(false);
+            eventSource.close();
+            break;
+        }
+      };
+
+      // Handle connection errors
+      eventSource.onerror = () => {
+        setError("Connection error. Please try again later.");
+        setLoading(false);
+        eventSource.close();
+      };
+
+      // Clean up function to close connection if component unmounts
+      return () => {
+        eventSource.close();
+      };
     } catch (err) {
-      console.error("Error fetching activity:", err);
+      console.error("Error setting up SSE:", err);
       setError(
         err instanceof Error
           ? err.message
           : "Failed to load activity data. Please try again later."
       );
-    } finally {
       setLoading(false);
     }
   };
