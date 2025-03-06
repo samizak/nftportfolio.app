@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import CurrencySelector from "@/components/CurrencySelector";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { containerClass } from "@/lib/utils";
-import Image from "next/image";
 
 interface HeaderProps {
   user: User;
@@ -16,12 +15,12 @@ export default function Header({ user, activePage }: HeaderProps) {
   const router = useRouter();
 
   return (
-    <header className="fixed top-0 left-0 right-0 w-full py-2.5 bg-background/95 backdrop-blur-md border-b border-border/40 text-foreground z-[100] shadow-sm">
+    <header className="fixed top-0 left-0 right-0 w-full py-2.5 bg-background/80 backdrop-blur-md border-b border-border/40 text-foreground z-[100] shadow-sm">
       <div className={`${containerClass} mx-auto px-4`}>
         <div className="flex items-center justify-between h-12">
           <div className="flex items-center gap-2">
-            <h1 
-              onClick={() => router.push('/')} 
+            <h1
+              onClick={() => router.push("/")}
               className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
             >
               nftportfolio.app
