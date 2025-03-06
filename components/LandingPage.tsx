@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { LandingPageProps } from "@/types/page";
-import Footer from "./Footer";
+import Footer from "./layout/Footer";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { isAddress } from "ethers";
@@ -20,7 +20,7 @@ export default function LandingPage({
 
   const validateAndSearch = () => {
     const trimmedAddress = address.trim();
-    
+
     // Check if it's a valid Ethereum address
     if (!trimmedAddress) {
       setError("Please enter an address");
@@ -28,7 +28,7 @@ export default function LandingPage({
     }
 
     // Check if it's an ENS name
-    if (trimmedAddress.toLowerCase().endsWith('.eth')) {
+    if (trimmedAddress.toLowerCase().endsWith(".eth")) {
       router.push(`/portfolio?id=${trimmedAddress}`);
       return;
     }
@@ -46,7 +46,7 @@ export default function LandingPage({
   return (
     <div className="flex flex-col min-h-screen overflow-hidden">
       <main className="flex-grow flex flex-col items-center justify-center p-4 md:p-8 pb-20">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -87,9 +87,7 @@ export default function LandingPage({
               →
             </Button>
             {error && (
-              <p className="text-red-500 text-sm mt-1 absolute">
-                {error}
-              </p>
+              <p className="text-red-500 text-sm mt-1 absolute">{error}</p>
             )}
           </div>
 
@@ -105,7 +103,7 @@ export default function LandingPage({
           </div>
 
           <Button
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#F6851B] to-[#E2761B] hover:from-[#E2761B] hover:to-[#F6851B] transition-all duration-300"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#F6851B] to-[#E2761B] hover:from-[#E2761B] hover:to-[#F6851B] transition-all duration-300 cursor-pointer"
             onClick={onConnectMetamask}
           >
             <Image
