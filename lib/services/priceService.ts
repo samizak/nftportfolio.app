@@ -24,6 +24,9 @@ class PriceService {
   private client: MongoClient;
   private updateInterval: NodeJS.Timeout | null = null;
   private initialized: Promise<void>;
+  private retryCount: number = 0;
+  private maxRetries: number = 5;
+  private retryDelay: number = 60 * 1000; // 1 minute in milliseconds
 
   private constructor() {
     this.client = new MongoClient(process.env.MONGODB_URI || "");
@@ -41,7 +44,7 @@ class PriceService {
   // New initialization method that runs on startup
   private async initialize(): Promise<void> {
     try {
-      console.log(`[${new Date().toISOString()}] Initializing gas service...`);
+      console.log(`[${new Date().toISOString()}] Initializing price service...`);
       const existingPrices = await this.getPrices();
       if (!existingPrices) {
         console.log("No existing prices found, fetching from API...");
@@ -59,9 +62,7 @@ class PriceService {
 
   private async fetchPrices(): Promise<PriceData | null> {
     try {
-      console.log(
-        `[${new Date().toISOString()}] Fetching ETH prices from CoinGecko...`
-      );
+      console.log(`[${new Date().toISOString()}] Fetching ETH prices from CoinGecko...`);
       const response = await fetch(
         "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,eur,gbp,jpy,aud,cad,cny",
         {
@@ -77,13 +78,12 @@ class PriceService {
       }
 
       const data = await response.json();
-      console.log(
-        `[${new Date().toISOString()}] ETH prices fetched successfully`
-      );
+      console.log(`[${new Date().toISOString()}] ETH prices fetched successfully`);
+      this.retryCount = 0; // Reset retry count on successful fetch
       return {
         prices: data.ethereum,
         lastUpdated: new Date(),
-        isDefault: false, // Add the missing isDefault property
+        isDefault: false,
       };
     } catch (error) {
       console.error("Error fetching prices:", error);
@@ -91,16 +91,27 @@ class PriceService {
     }
   }
 
-  // Fix for the updatePrices method to include isDefault property
+  // Updated updatePrices method with retry logic
   private async updatePrices(): Promise<void> {
     const prices = await this.fetchPrices();
+    
     if (!prices) {
-      console.log(
-        `[${new Date().toISOString()}] Failed to fetch eth prices, using default values`
-      );
-      // Use default prices if fetch fails
-      await this.saveDefaultPrices();
-      return;
+      if (this.retryCount < this.maxRetries) {
+        this.retryCount++;
+        console.log(`[${new Date().toISOString()}] Fetch attempt ${this.retryCount}/${this.maxRetries} failed. Retrying in ${this.retryDelay/1000} seconds...`);
+        
+        // Schedule a retry after the delay
+        setTimeout(() => {
+          this.updatePrices();
+        }, this.retryDelay);
+        
+        return;
+      } else {
+        console.log(`[${new Date().toISOString()}] Maximum retry attempts (${this.maxRetries}) reached. Using default values.`);
+        this.retryCount = 0; // Reset for next update cycle
+        await this.saveDefaultPrices();
+        return;
+      }
     }
 
     try {
@@ -114,7 +125,7 @@ class PriceService {
           $set: {
             prices: prices.prices,
             lastUpdated: prices.lastUpdated,
-            isDefault: prices.isDefault, // Include isDefault in the update
+            isDefault: prices.isDefault,
           },
         },
         { upsert: true }
@@ -157,6 +168,7 @@ class PriceService {
       await this.client.close();
     }
   }
+  
   // Save default prices if API fails
   private async saveDefaultPrices(): Promise<void> {
     try {
@@ -186,10 +198,12 @@ class PriceService {
       await this.client.close();
     }
   }
+  
+  // Updated to fetch every 5 minutes instead of 2
   private startUpdateCycle(): void {
     this.updateInterval = setInterval(() => {
       this.updatePrices();
-    }, 2 * 60 * 1000); // Update every 2 minute
+    }, 5 * 60 * 1000); // Update every 5 minutes
   }
 }
 
