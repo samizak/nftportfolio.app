@@ -42,7 +42,7 @@ export interface NFTEvent {
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const walletAddress = searchParams.get("address");
-  const maxPages = parseInt(searchParams.get("maxPages") || "5");
+  const maxPages = parseInt(searchParams.get("maxPages") || "20");
   const forceRefresh = searchParams.get("refresh") === "true";
 
   if (!walletAddress) {
@@ -57,57 +57,25 @@ export async function GET(request: NextRequest) {
 
   // Connect to MongoDB
   await dbConnect();
-
-  // Set up SSE response
-  const encoder = new TextEncoder();
-  const stream = new TransformStream();
-  const writer = stream.writable.getWriter();
-
-  // Check if we have recent data in MongoDB (less than 1 hour old)
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  // Check for existing events
   const existingEvents = await Event.find({
     walletAddress,
-    updatedAt: { $gt: oneHourAgo },
   }).sort({ timestamp: -1 });
-
-  // If we have recent data and no force refresh, return it from MongoDB
+  // If we have data and no force refresh, return it directly
   if (existingEvents.length > 0 && !forceRefresh) {
-    await writer.write(
-      encoder.encode(
-        `data: ${JSON.stringify({
-          type: "progress",
-          message: "Fetching data from cache...",
-          pageCount: 0,
-        })}\n\n`
-      )
+    console.log(
+      `Found ${existingEvents.length} cached events for ${walletAddress}`
     );
 
-    // Send all events in one chunk
-    await writer.write(
-      encoder.encode(
-        `data: ${JSON.stringify({
-          type: "chunk",
-          events: existingEvents,
-          pageCount: 1,
-          totalEvents: existingEvents.length,
-        })}\n\n`
-      )
-    );
+    // Create a new stream for cached data
+    const encoder = new TextEncoder();
+    const cachedStream = new TransformStream();
+    const cachedWriter = cachedStream.writable.getWriter();
 
-    await writer.write(
-      encoder.encode(
-        `data: ${JSON.stringify({
-          type: "complete",
-          totalPages: 1,
-          totalEvents: existingEvents.length,
-          hasMore: false,
-          fromCache: true,
-        })}\n\n`
-      )
-    );
+    // Send data in a separate function to avoid blocking
+    sendCachedData(cachedWriter, existingEvents, encoder);
 
-    writer.close();
-    return new Response(stream.readable, {
+    return new Response(cachedStream.readable, {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
@@ -115,7 +83,10 @@ export async function GET(request: NextRequest) {
       },
     });
   }
-
+  // For fresh data, set up a new SSE response
+  const encoder = new TextEncoder();
+  const stream = new TransformStream();
+  const writer = stream.writable.getWriter();
   // If no recent data or force refresh, fetch from OpenSea
   fetchAllEvents(walletAddress, maxPages, writer).catch((error) => {
     console.error("Error in SSE stream:", error);
@@ -124,7 +95,6 @@ export async function GET(request: NextRequest) {
     );
     writer.close();
   });
-
   return new Response(stream.readable, {
     headers: {
       "Content-Type": "text/event-stream",
@@ -134,6 +104,69 @@ export async function GET(request: NextRequest) {
   });
 }
 
+// Separate function to send cached data
+async function sendCachedData(
+  writer: WritableStreamDefaultWriter,
+  events: any[],
+  encoder: TextEncoder
+) {
+  try {
+    console.log("Starting to send cached data");
+
+    // Send progress message
+    await writer.write(
+      encoder.encode(
+        `data: ${JSON.stringify({
+          type: "progress",
+          message: "Fetching data from cache...",
+          pageCount: 0,
+        })}\n\n`
+      )
+    );
+    console.log("Progress message sent");
+
+    // Send all events in one chunk
+    await writer.write(
+      encoder.encode(
+        `data: ${JSON.stringify({
+          type: "chunk",
+          events: events,
+          pageCount: 1,
+          totalEvents: events.length,
+        })}\n\n`
+      )
+    );
+    console.log("Events chunk sent");
+
+    // Send completion message
+    await writer.write(
+      encoder.encode(
+        `data: ${JSON.stringify({
+          type: "complete",
+          totalPages: 1,
+          totalEvents: events.length,
+          hasMore: false,
+          fromCache: true,
+        })}\n\n`
+      )
+    );
+    console.log("Complete message sent");
+  } catch (error) {
+    console.error("Error sending cached data:", error);
+    await writer.write(
+      encoder.encode(
+        `data: ${JSON.stringify({
+          type: "error",
+          error: "Error sending cached data",
+        })}\n\n`
+      )
+    );
+  } finally {
+    console.log("Closing writer");
+    await writer.close();
+    console.log("Writer closed");
+  }
+}
 async function fetchAllEvents(
   walletAddress: string,
   maxPages: number,
