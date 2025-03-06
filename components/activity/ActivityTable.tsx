@@ -8,7 +8,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink } from "lucide-react";
 import {
   formatEventDate,
   getAccountName,
@@ -21,6 +20,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  ArrowLeftRight,
+  ShoppingBag,
+  Plus,
+  Tag,
+  HandCoins,
+  XCircle,
+  CircleDashed,
+} from "lucide-react";
 
 export interface ActivityEvent {
   id: string;
@@ -61,6 +74,16 @@ interface ActivityTableProps {
 }
 
 export default function ActivityTable({ events }: ActivityTableProps) {
+  // Add pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
+
+  // Calculate pagination values
+  const totalPages = Math.ceil(events.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, events.length);
+  const paginatedEvents = events.slice(startIndex, endIndex);
+
   return (
     <Card className="shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -99,19 +122,61 @@ export default function ActivityTable({ events }: ActivityTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events.map((event, i) => (
+              {paginatedEvents.map((event, i) => (
                 <TableRow
                   key={`event-${i}-${event.id}`}
                   className="hover:bg-muted/20 transition-colors"
                 >
                   <TableCell className="py-5 pl-8">
-                    <Badge
-                      className={`${getEventBadgeColor(
-                        event.event_type
-                      )} px-4 py-1.5 capitalize font-medium text-sm`}
-                    >
-                      {event.event_type}
-                    </Badge>
+                    <div className="flex items-center">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`p-2 rounded-full ${getEventBadgeColor(
+                            event.event_type
+                          )} bg-opacity-15`}
+                        >
+                          {event.event_type === "sale" ? (
+                            <ShoppingBag className="h-4 w-4" />
+                          ) : event.event_type === "transfer" ? (
+                            <ArrowLeftRight className="h-4 w-4" />
+                          ) : event.event_type === "mint" ? (
+                            <Plus className="h-4 w-4" />
+                          ) : event.event_type === "list" ? (
+                            <Tag className="h-4 w-4" />
+                          ) : event.event_type === "offer" ? (
+                            <HandCoins className="h-4 w-4" />
+                          ) : event.event_type === "cancel_list" ? (
+                            <XCircle className="h-4 w-4" />
+                          ) : event.event_type === "cancel_offer" ? (
+                            <XCircle className="h-4 w-4" />
+                          ) : (
+                            <CircleDashed className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-medium capitalize text-sm">
+                            {event.event_type}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {event.event_type === "sale"
+                              ? "NFT Sold"
+                              : event.event_type === "transfer"
+                              ? "NFT Transferred"
+                              : event.event_type === "mint"
+                              ? "NFT Created"
+                              : event.event_type === "list"
+                              ? "Listed for Sale"
+                              : event.event_type === "offer"
+                              ? "Offer Received"
+                              : event.event_type === "cancel_list"
+                              ? "Listing Cancelled"
+                              : event.event_type === "cancel_offer"
+                              ? "Offer Cancelled"
+                              : "Transaction"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="py-5">
                     <div className="flex items-center space-x-4 group">
@@ -132,7 +197,8 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                               height="24"
                               viewBox="0 0 24 24"
                               fill="none"
-                              stroke="currentColor"
+                              stroke="currentColor
+"
                               strokeWidth="2"
                               strokeLinecap="round"
                               strokeLinejoin="round"
@@ -277,6 +343,41 @@ export default function ActivityTable({ events }: ActivityTableProps) {
               ))}
             </TableBody>
           </Table>
+
+          {/* Add pagination controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-border/40">
+              <div className="text-sm text-muted-foreground">
+                Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
+                <span className="font-medium">{endIndex}</span> of{" "}
+                <span className="font-medium">{events.length}</span> events
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

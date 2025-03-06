@@ -136,3 +136,8 @@ html > body[data-scroll-locked] {
   overflow: visible !important;
   margin-right: 0 !important;
 }
+
+.fade-mask {
+  -webkit-mask-image: linear-gradient(to top, transparent, black);
+  mask-image: linear-gradient(to top, transparent, black);
+}

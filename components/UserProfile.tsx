@@ -45,7 +45,7 @@ export default function UserProfile({ user }: UserProfileProps) {
   return (
     <div className="flex flex-col rounded-xl border mb-8 shadow-sm overflow-hidden">
       {/* Banner section with gradient overlay */}
-      <div className="relative h-80 w-full">
+      <div className="relative h-80 w-full fade-mask">
         {user.banner !== "" && !bannerError ? (
           <div className="relative h-full w-full">
             <Image
@@ -53,13 +53,10 @@ export default function UserProfile({ user }: UserProfileProps) {
               alt="Profile banner"
               fill
               priority
-              sizes="100vw"
-              className="object-cover"
+              className="absolute inset-0 object-cover"
               onError={() => setBannerError(true)}
               unoptimized={user.banner.endsWith(".gif")}
             />
-            {/* Gradient overlay for banner image */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/10 to-background/80"></div>
           </div>
         ) : (
           <div className="w-full h-full">
@@ -73,7 +70,6 @@ export default function UserProfile({ user }: UserProfileProps) {
 
       {/* Profile content section */}
       <div className="relative px-8 pb-6">
-        {/* Avatar - positioned to overlap the banner */}
         <div className="absolute -top-16 left-8">
           <Avatar className="h-36 w-36 border-2 border-primary ring-4 ring-background shadow-lg">
             <AvatarImage src={user.avatar} alt={user.name} />
@@ -81,7 +77,6 @@ export default function UserProfile({ user }: UserProfileProps) {
           </Avatar>
         </div>
 
-        {/* User info with proper spacing */}
         <div className="pt-24 flex flex-col gap-2">
           <h2 className="text-2xl font-semibold">{user.name}</h2>
           <div className="flex items-center">
