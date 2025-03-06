@@ -157,7 +157,7 @@ export default function ActivityPage() {
     try {
       // Create SSE connection
       const eventSource = new EventSource(
-        `/api/get-events-by-account?address=${walletId}&maxPages=5`
+        `/api/get-events-by-account?address=${walletId}&maxPages=20`
       );
 
       // Handle incoming events
@@ -172,45 +172,7 @@ export default function ActivityPage() {
 
           case "chunk":
             // Append new events to the existing list
-            setEvents((currentEvents) => {
-              const formattedEvents = data.events.map((event: any) => ({
-                id:
-                  event.transaction?.hash ||
-                  `event-${Math.random().toString(36).substring(2, 9)}`,
-                event_type: event.event_type,
-                created_date: new Date(event.timestamp * 1000),
-                transaction: event.transaction,
-                nft: {
-                  identifier: event.nft?.identifier,
-                  name: event.nft?.name,
-                  collection: event.nft?.collection,
-                  image_url: event.nft?.image_url,
-                  display_image_url: event.nft?.display_image_url,
-                  contract: event.nft?.contract,
-                },
-                payment: {
-                  quantity: event?.payment?.quantity,
-                  token_address: event?.payment?.token_address,
-                  decimals: event?.payment?.decimals,
-                  symbol: event?.payment?.symbol,
-                },
-                from_account: {
-                  address:
-                    event.from_address ||
-                    "0x0000000000000000000000000000000000000000",
-                  user: event.from_account?.user,
-                },
-                to_account: {
-                  address:
-                    event.to_address ||
-                    "0x0000000000000000000000000000000000000000",
-                  user: event.to_account?.user,
-                },
-                quantity: parseInt(event.quantity) || 1,
-              }));
-
-              return [...currentEvents, ...formattedEvents];
-            });
+            setEvents((currentEvents) => [...currentEvents, ...data.events]);
             break;
 
           case "complete":
@@ -219,6 +181,7 @@ export default function ActivityPage() {
             console.log(
               `Completed: ${data.totalEvents} events across ${data.totalPages} pages`
             );
+
             eventSource.close();
             break;
 

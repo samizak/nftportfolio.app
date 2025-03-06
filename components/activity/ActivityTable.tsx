@@ -61,7 +61,6 @@ interface ActivityTableProps {
 }
 
 export default function ActivityTable({ events }: ActivityTableProps) {
-  // console.log(events);
   return (
     <Card className="shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -117,13 +116,34 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                   <TableCell className="py-5">
                     <div className="flex items-center space-x-4 group">
                       <div className="relative h-14 w-14 rounded-md overflow-hidden border border-muted flex-shrink-0 transition-all duration-200 group-hover:shadow-md group-hover:scale-105">
-                        <Image
-                          src={event.nft.display_image_url}
-                          alt={event.id}
-                          fill
-                          sizes="56px"
-                          className="object-cover transition-transform duration-300 group-hover:scale-110"
-                        />
+                        {event.nft.display_image_url ? (
+                          <Image
+                            src={event.nft.display_image_url}
+                            alt={event.id}
+                            fill
+                            sizes="56px"
+                            className="object-cover transition-transform duration-300 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-muted/30">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-muted-foreground"
+                            >
+                              <path d="M5.64 5.64a9 9 0 1 0 12.72 12.72 9 9 0 1 0-12.72-12.72" />
+                              <path d="m12 14 4-4" />
+                              <path d="M14 12h-4v4" />
+                            </svg>
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col">
                         <a

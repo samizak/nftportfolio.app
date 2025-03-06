@@ -270,7 +270,7 @@ async function fetchAllEvents(
           return {
             id: e.id || fallbackId,
             event_type: e.event_type,
-            created_date: e.event_timestamp,
+            created_date: new Date(e.event_timestamp * 1000),
             transaction: e.transaction,
             nft: {
               display_image_url: e.nft?.image_url || "",
@@ -281,13 +281,14 @@ async function fetchAllEvents(
               contract: e.nft?.contract || "",
             },
             payment: {
-              quantity: e.payment?.quantity || "0",
-              token_address: e.payment?.token?.address || "",
+              quantity: e.payment?.quantity || null,
+              token_address: e.payment?.token?.address || null,
               decimals: e.payment?.token?.decimals || "18",
               symbol: e.payment?.token?.symbol || "ETH",
             },
             from_account: {
-              address: e.from_address || "",
+              address:
+                e.event_type !== "sale" ? e.from_address || "" : e.seller,
               user: e.from_account?.user
                 ? {
                     username: e.from_account.user.username || "",
@@ -295,7 +296,7 @@ async function fetchAllEvents(
                 : undefined,
             },
             to_account: {
-              address: e.to_address || "",
+              address: e.event_type !== "sale" ? e.to_address || "" : e.seller,
               user: e.to_account?.user
                 ? {
                     username: e.to_account.user.username || "",
@@ -309,7 +310,7 @@ async function fetchAllEvents(
       const eventsToStore: NFTEvent[] = events.map((event: NFTEvent) => ({
         ...event,
         walletAddress,
-        timestamp: new Date(event.created_date),
+        timestamp: new Date((event.created_date as any) * 1000),
         updatedAt: new Date(),
       }));
       const bulkOps = eventsToStore.map((event: NFTEvent) => ({
