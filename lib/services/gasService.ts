@@ -55,9 +55,9 @@ class GasService {
 
   private async fetchGasPrices(): Promise<GasData | null> {
     try {
-      console.log(
-        `[${new Date().toISOString()}] Fetching gas prices from Infura...`
-      );
+      // console.log(
+      //   `[${new Date().toISOString()}] Fetching gas prices from Infura...`
+      // );
       const infuraApiKey = process.env.INFURA_API_KEY;
 
       if (!infuraApiKey) {
@@ -124,9 +124,9 @@ class GasService {
         { $set: prices },
         { upsert: true }
       );
-      console.log(
-        `[${new Date().toISOString()}] Gas prices updated in database`
-      );
+      // console.log(
+      //   `[${new Date().toISOString()}] Gas prices updated in database`
+      // );
     } catch (error) {
       console.error("Error updating gas prices cache:", error);
     } finally {
@@ -173,7 +173,7 @@ class GasService {
       const cacheAge = Date.now() - this.cachedGasData.lastUpdated.getTime();
       if (cacheAge < 5 * 60 * 1000) {
         // 5 minutes
-        console.log("Returning cached gas data");
+        // console.log("Returning cached gas data");
         return this.cachedGasData;
       }
     }
@@ -189,7 +189,7 @@ class GasService {
 
       if (!latestPrices) {
         // If no data in DB, try to fetch fresh data
-        console.log("No data in DB, fetching fresh gas prices");
+        // console.log("No data in DB, fetching fresh gas prices");
         return await this.fetchGasPrices();
       }
 
@@ -209,7 +209,7 @@ class GasService {
 
       // If DB access fails but we have cached data, return it regardless of age
       if (this.cachedGasData) {
-        console.log("DB error, returning cached gas data");
+        // console.log("DB error, returning cached gas data");
         return this.cachedGasData;
       }
 

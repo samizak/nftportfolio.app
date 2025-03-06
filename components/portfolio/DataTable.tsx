@@ -70,7 +70,7 @@ export function DataTable({
   // Show a message when there's no data
   if (data.length === 0) {
     return (
-      <div className="rounded-md border flex flex-col items-center justify-center min-h-[190px] p-8 text-center bg-muted/30">
+      <div className="rounded-md border flex flex-col items-center justify-center min-h-[190px] p-8 text-center">
         <div className="space-y-4">
           <div className="rounded-full bg-muted/50 p-3 w-fit mx-auto">
             <PackageX className="w-8 h-8 text-muted-foreground" />

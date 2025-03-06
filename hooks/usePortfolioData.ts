@@ -2,15 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
-import { useCurrency } from "@/context/CurrencyContext";
+import { useEthPrice } from "@/context/EthPriceContext";
 import { fetchWithRetry } from "../lib/fetchWithRetry";
 import { CollectionData } from "@/types/nft";
 
 export function usePortfolioData(id: string | null) {
-  const { selectedCurrency } = useCurrency();
   const { setError, setIsLoading } = useUser();
+  const { ethPrice } = useEthPrice(); // Get ethPrice from context
   const [collections, setCollections] = useState<CollectionData[]>([]);
-  const [ethPrice, setEthPrice] = useState(0);
   const [totalNfts, setTotalNfts] = useState(0);
   const [totalValue, setTotalValue] = useState(0);
   const [fetchProgress, setFetchProgress] = useState({
@@ -20,25 +19,10 @@ export function usePortfolioData(id: string | null) {
   });
   const [fetchingNFTs, setFetchingNFTs] = useState(false);
 
-  // ETH price fetch effect
-  useEffect(() => {
-    (async () => {
-      try {
-        const response = await fetchWithRetry(`/api/fetch-ethereum-prices`);
-        if (!response) return;
-        const data = await response.json();
-        setEthPrice(data.ethPrice[selectedCurrency.code.toLowerCase()]);
-      } catch (error) {
-        console.error("Error fetching ETH price:", error);
-      }
-    })();
-  }, [selectedCurrency]);
-
   // Collections fetch effect
   useEffect(() => {
     const fetchCollectionsAndInfo = async () => {
       try {
-        // Add loading state
         setIsLoading(true);
         setFetchingNFTs(true);
         setFetchProgress({

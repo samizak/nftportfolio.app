@@ -1,8 +1,8 @@
 "use client";
 
 import UserProfile from "@/components/UserProfile";
-import Footer from "@/components/Footer";
-import Header from "@/components/Header";
+import Footer from "@/components/layout/Footer";
+import Header from "@/components/layout/Header";
 import { containerClass } from "@/lib/utils";
 import ActivityTable, {
   ActivityEvent,

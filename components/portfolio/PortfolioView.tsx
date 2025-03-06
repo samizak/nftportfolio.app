@@ -1,16 +1,16 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import PortfolioStats from "@/components/PortfolioStats";
+import PortfolioStats from "@/components/portfolio/PortfolioStats";
 import UserProfile from "@/components/UserProfile";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import TableFilters from "@/components/TableFilters";
-import { DataTable } from "@/components/DataTable";
+import { DataTable } from "@/components/portfolio/DataTable";
 import { containerClass } from "@/lib/utils";
 import { PortfolioViewProps } from "@/types/portfolio";
-import Footer from "@/components/Footer";
-import Header from "@/components/Header";
+import Footer from "@/components/layout/Footer";
+import Header from "@/components/layout/Header";
 
 export default function PortfolioView({
   user,

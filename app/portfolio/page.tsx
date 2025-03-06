@@ -1,6 +1,6 @@
 "use client";
 
-import PortfolioView from "@/components/PortfolioView";
+import PortfolioView from "@/components/portfolio/PortfolioView";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useUser } from "@/context/UserContext";
