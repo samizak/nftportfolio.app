@@ -13,10 +13,14 @@ import ActivityTable, {
   ActivityEvent,
 } from "@/components/activity/ActivityTable";
 import ActivitySkeleton from "@/components/activity/ActivitySkeleton";
+import { useRouter } from "next/navigation";
+import { isAddress } from "ethers";
 
 export default function ActivityPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const walletId = searchParams.get("id") || "";
+  const [isValidAddress, setIsValidAddress] = useState<boolean | null>(null);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,16 +35,34 @@ export default function ActivityPage() {
     setError: setUserError,
   } = useUser();
 
+  // Add validation for Ethereum address
   useEffect(() => {
-    if (!walletId) {
-      setError("No wallet address provided");
-      setIsLoading(false);
+    if (walletId) {
+      const isEthAddress = isAddress(walletId);
+      const isEnsName = walletId.toLowerCase().endsWith('.eth');
+      
+      if (!isEthAddress && !isEnsName) {
+        console.warn("Invalid Ethereum address or ENS name:", walletId);
+        setIsValidAddress(false);
+        router.push("/");
+        return;
+      }
+      setIsValidAddress(true);
+    } else {
+      setIsValidAddress(false);
+      router.push("/");
+    }
+  }, [walletId, router]);
+
+  // Modify the existing useEffect to only run if address is valid
+  useEffect(() => {
+    if (!walletId || !isValidAddress) {
       return;
     }
 
     fetchUserData();
     fetchActivity();
-  }, [walletId]);
+  }, [walletId, isValidAddress]);
 
   const fetchUserData = async () => {
     try {
@@ -49,7 +71,13 @@ export default function ActivityPage() {
 
       // Fetch ENS data
       const ensResponse = await fetchWithRetry(`/api/get-ens?id=${walletId}`);
-      if (!ensResponse) return;
+      if (!ensResponse) {
+        console.error("No ENS response received");
+        setUserError("Failed to fetch ENS data");
+        setIsLoading(false);
+        return;
+      }
+      
       const ensJson = await ensResponse.json();
       setEnsData(ensJson);
 
@@ -57,7 +85,13 @@ export default function ActivityPage() {
         const userResponse = await fetchWithRetry(
           `/api/get-user-profile?id=${walletId}`
         );
-        if (!userResponse) return;
+        if (!userResponse) {
+          console.error("No user profile response received");
+          setUserError("Failed to fetch user profile");
+          setIsLoading(false);
+          return;
+        }
+        
         const userJson = await userResponse.json();
 
         if (userJson.error) {
@@ -118,6 +152,7 @@ export default function ActivityPage() {
     setError(null);
 
     try {
+      console.log("Fetching activity data for:", walletId);
       const response = await fetchWithRetry(
         `/api/get-events-by-account?address=${walletId}`
       );
@@ -131,8 +166,6 @@ export default function ActivityPage() {
       if (data.error) {
         throw new Error(data.error);
       }
-
-      // console.log(data[6]);
 
       const formattedEvents: ActivityEvent[] = data.map((event: any) => ({
         id:

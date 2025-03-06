@@ -80,6 +80,10 @@
   --sidebar-ring: oklch(0.439 0 0);
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -126,4 +130,9 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+html > body[data-scroll-locked] {
+  overflow: visible !important;
+  margin-right: 0 !important;
 }

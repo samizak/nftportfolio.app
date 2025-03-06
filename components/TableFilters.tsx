@@ -53,14 +53,25 @@ export default function TableFilters({
               value={selectedField}
               onValueChange={(value) => setSelectedField(value)}
             >
-              <SelectTrigger id="filter-field">
+              <SelectTrigger id="filter-field" className="cursor-pointer">
                 <SelectValue placeholder="Select field" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="quantity">Quantity</SelectItem>
-                <SelectItem value="floorPrice">Floor Price</SelectItem>
-                <SelectItem value="value">Value</SelectItem>
-                <SelectItem value="portfolioPercentage">Portfolio %</SelectItem>
+                <SelectItem value="quantity" className="cursor-pointer">
+                  Quantity
+                </SelectItem>
+                <SelectItem value="floorPrice" className="cursor-pointer">
+                  Floor Price
+                </SelectItem>
+                <SelectItem value="value" className="cursor-pointer">
+                  Value
+                </SelectItem>
+                <SelectItem
+                  value="portfolioPercentage"
+                  className="cursor-pointer"
+                >
+                  Portfolio %
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>

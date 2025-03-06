@@ -4,12 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PortfolioStats from "@/components/PortfolioStats";
 import UserProfile from "@/components/UserProfile";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TableFilters from "@/components/TableFilters";
 import { DataTable } from "@/components/DataTable";
 import { containerClass } from "@/lib/utils";
 import { PortfolioViewProps } from "@/types/portfolio";
-import { useEffect } from "react";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 
@@ -24,10 +23,11 @@ export default function PortfolioView({
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredData, setFilteredData] = useState(data);
 
-  // Add this effect to update filteredData when data changes
+  // Update filteredData when data changes
   useEffect(() => {
     setFilteredData(applySearchAndFilters(searchQuery, data));
-  }, [data]);
+  }, [data, searchQuery]); // Added searchQuery as dependency
+
   // Apply both search and filters
   const applySearchAndFilters = (
     searchTerm: string,
@@ -103,7 +103,7 @@ export default function PortfolioView({
 
           {/* Main content column - auto width */}
           <div>
-            <Card>
+            <Card className="h-full">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Your NFT Collection</CardTitle>
                 <div className="w-72">

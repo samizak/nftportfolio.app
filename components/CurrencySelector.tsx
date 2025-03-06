@@ -23,17 +23,18 @@ export default function CurrencySelector() {
   const { selectedCurrency, setSelectedCurrency } = useCurrency();
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild className="cursor-pointer">
         <Button variant="outline" size="sm" className="w-20">
           {selectedCurrency.code}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="z-[100]">
         {currencies.map((currency) => (
           <DropdownMenuItem
             key={currency.code}
             onClick={() => setSelectedCurrency(currency)}
+            className="cursor-pointer"
           >
             {currency.code}
           </DropdownMenuItem>

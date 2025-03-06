@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { LandingPageProps } from "@/types/page";
 import Footer from "./Footer";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { isAddress } from "ethers";
 
 export default function LandingPage({
   address,
@@ -14,11 +16,31 @@ export default function LandingPage({
   onConnectMetamask,
 }: LandingPageProps) {
   const router = useRouter();
+  const [error, setError] = useState<string>("");
 
-  const handleSearch = () => {
-    if (address.trim()) {
-      router.push(`/portfolio?id=${address.trim()}`);
+  const validateAndSearch = () => {
+    const trimmedAddress = address.trim();
+    
+    // Check if it's a valid Ethereum address
+    if (!trimmedAddress) {
+      setError("Please enter an address");
+      return;
     }
+
+    // Check if it's an ENS name
+    if (trimmedAddress.toLowerCase().endsWith('.eth')) {
+      router.push(`/portfolio?id=${trimmedAddress}`);
+      return;
+    }
+
+    // Validate Ethereum address
+    if (!isAddress(trimmedAddress)) {
+      setError("Please enter a valid Ethereum address");
+      return;
+    }
+
+    setError("");
+    router.push(`/portfolio?id=${trimmedAddress}`);
   };
 
   return (
@@ -48,17 +70,27 @@ export default function LandingPage({
             <Input
               placeholder="Enter ETH address or ENS name"
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full pr-12 bg-background/70 backdrop-blur-sm"
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              onChange={(e) => {
+                setAddress(e.target.value);
+                setError(""); // Clear error when input changes
+              }}
+              className={`w-full pr-12 bg-background/70 backdrop-blur-sm ${
+                error ? "border-red-500 focus-visible:ring-red-500" : ""
+              }`}
+              onKeyDown={(e) => e.key === "Enter" && validateAndSearch()}
             />
             <Button
               variant="ghost"
               className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-primary/10 transition-colors"
-              onClick={handleSearch}
+              onClick={validateAndSearch}
             >
               →
             </Button>
+            {error && (
+              <p className="text-red-500 text-sm mt-1 absolute">
+                {error}
+              </p>
+            )}
           </div>
 
           <div className="relative">

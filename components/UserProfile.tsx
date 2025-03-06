@@ -56,7 +56,7 @@ export default function UserProfile({ user }: UserProfileProps) {
               sizes="100vw"
               className="object-cover"
               onError={() => setBannerError(true)}
-              unoptimized={user.banner.endsWith('.gif')}
+              unoptimized={user.banner.endsWith(".gif")}
             />
             {/* Gradient overlay for banner image */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/10 to-background/80"></div>
@@ -92,13 +92,17 @@ export default function UserProfile({ user }: UserProfileProps) {
                 {user.ethAddress}
               </span>
             )}
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-6 w-6 ml-1">
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
+              <DropdownMenuContent
+                align="start"
+                sideOffset={4}
+                className="z-[20]"
+              >
                 <DropdownMenuLabel>Wallet Details</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {user.ethHandle && (

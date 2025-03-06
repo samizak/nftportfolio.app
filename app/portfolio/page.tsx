@@ -8,11 +8,38 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { Loader2 } from "lucide-react";
 import { usePortfolioData } from "@/hooks/usePortfolioData";
 import { fetchWithRetry } from "@/lib/fetchWithRetry";
+import { ArrowLeft } from "lucide-react"; // Add this import
+import { Button } from "@/components/ui/button"; // Add this import
+import { useRouter } from "next/navigation"; // Add this import
+import { isAddress } from "ethers"; // Add this import
 
 export default function AddressPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
   const { selectedCurrency } = useCurrency();
+  const [isValidAddress, setIsValidAddress] = useState<boolean | null>(null);
+
+  // Add validation for Ethereum address
+  useEffect(() => {
+    // Check if id exists and is a valid Ethereum address or ENS name
+    if (id) {
+      const isEthAddress = isAddress(id);
+      const isEnsName = id?.toLowerCase().endsWith(".eth");
+
+      if (!isEthAddress && !isEnsName) {
+        console.warn("Invalid Ethereum address or ENS name:", id);
+        setIsValidAddress(false);
+        router.push("/");
+      } else {
+        setIsValidAddress(true);
+      }
+    } else {
+      setIsValidAddress(false);
+      router.push("/");
+    }
+  }, [id, router]);
+
   const {
     userData,
     ensData,
@@ -24,7 +51,7 @@ export default function AddressPage() {
     setError,
   } = useUser();
 
-  // Use the new hook
+  // Use the new hook only if address is valid
   const {
     collections,
     ethPrice,
@@ -32,13 +59,11 @@ export default function AddressPage() {
     totalValue,
     fetchingNFTs,
     fetchProgress,
-  } = usePortfolioData(id);
+  } = usePortfolioData(isValidAddress ? id : null);
 
-  // Keep the user profile and ENS data fetch effect
+  // Modify the user profile and ENS data fetch effect
   useEffect(() => {
-    if (!id) {
-      setError("No address provided");
-      setIsLoading(false);
+    if (!id || !isValidAddress) {
       return;
     }
 
@@ -48,7 +73,13 @@ export default function AddressPage() {
         setError(null);
 
         const ensResponse = await fetchWithRetry(`/api/get-ens?id=${id}`);
-        if (!ensResponse) return;
+        if (!ensResponse) {
+          console.error("No ENS response received");
+          setError("Failed to fetch ENS data");
+          setIsLoading(false);
+          return;
+        }
+
         const ensJson = await ensResponse.json();
         setEnsData(ensJson);
 
@@ -56,7 +87,13 @@ export default function AddressPage() {
           const userResponse = await fetchWithRetry(
             `/api/get-user-profile?id=${id}`
           );
-          if (!userResponse) return;
+          if (!userResponse) {
+            console.error("No user profile response received");
+            setError("Failed to fetch user profile");
+            setIsLoading(false);
+            return;
+          }
+
           const userJson = await userResponse.json();
 
           if (userJson.error) {
@@ -107,22 +144,43 @@ export default function AddressPage() {
     };
 
     fetchData();
-  }, [id, setUserData, setEnsData, setIsLoading, setError]);
+  }, [id, isValidAddress, setUserData, setEnsData, setIsLoading, setError]);
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md w-full shadow-sm text-center">
-          <h2 className="text-xl font-semibold text-red-700 dark:text-red-400 mb-2">
-            Something went wrong
-          </h2>
-          <p className="text-red-600 dark:text-red-300 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="w-24 bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-700 dark:text-red-200 px-4 py-2 rounded-md text-sm transition-colors"
-          >
-            Try again
-          </button>
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-background to-background/50">
+        <div className="relative backdrop-blur-sm bg-card/30 border border-border/50 rounded-xl p-8 max-w-md w-full shadow-lg">
+          <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-xl" />
+          <div className="relative">
+            <h2 className="text-2xl font-bold text-foreground mb-3">
+              {error.includes("404")
+                ? "Portfolio Not Found"
+                : "Something went wrong"}
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              {error.includes("404")
+                ? "We couldn't find any NFTs for this address. The address might be incorrect or doesn't own any NFTs."
+                : error}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => router.push("/")}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Home
+              </Button>
+              {!error.includes("404") && (
+                <Button
+                  onClick={() => window.location.reload()}
+                  className="bg-primary/90 hover:bg-primary"
+                >
+                  Try again
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );

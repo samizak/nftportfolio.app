@@ -15,6 +15,12 @@ import {
   getEventBadgeColor,
 } from "@/lib/activityUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface ActivityEvent {
   id: string;
@@ -113,7 +119,7 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                       <div className="relative h-14 w-14 rounded-md overflow-hidden border border-muted flex-shrink-0 transition-all duration-200 group-hover:shadow-md group-hover:scale-105">
                         <Image
                           src={event.nft.display_image_url}
-                          alt={event.nft.name}
+                          alt={event.id}
                           fill
                           sizes="56px"
                           className="object-cover transition-transform duration-300 group-hover:scale-110"
@@ -149,7 +155,7 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                     </p>
                   </TableCell>
                   <TableCell className="py-5 font-medium text-base">
-                    {event.quantity || 1}
+                    <Badge variant="outline">{event.quantity || 1}</Badge>
                   </TableCell>
                   <TableCell className="py-5 font-medium">
                     <div className="flex items-center space-x-1.5">
@@ -198,25 +204,54 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                     </div>
                   </TableCell>
                   <TableCell className="py-4 font-medium">
-                    <a
-                      href={`https://etherscan.io/tx/${event.transaction}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center group"
-                    >
-                      <span className="bg-blue-500/10 text-blue-600 px-2 py-1 rounded text-sm truncate max-w-[180px] group-hover:bg-blue-500/20 transition-colors">
-                        {`${event.transaction.substring(
-                          0,
-                          12
-                        )}...${event.transaction.substring(
-                          event.transaction.length - 4
-                        )}`}
-                      </span>
-                      <ExternalLink className="ml-1 h-3.5 w-3.5 text-blue-500 group-hover:text-blue-700 transition-colors" />
-                    </a>
+                    {event.transaction && (
+                      <a
+                        href={`https://etherscan.io/tx/${event.transaction}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center group"
+                      >
+                        <span className="bg-blue-500/10 text-blue-600 px-2 py-1 rounded text-sm truncate max-w-[180px] group-hover:bg-blue-500/20 transition-colors">
+                          {`${event.transaction.substring(
+                            0,
+                            12
+                          )}...${event.transaction.substring(
+                            event.transaction.length - 4
+                          )}`}
+                        </span>
+                        <ExternalLink className="ml-1 h-3.5 w-3.5 text-blue-500 group-hover:text-blue-700 transition-colors" />
+                      </a>
+                    )}
                   </TableCell>
                   <TableCell className="text-right text-base text-muted-foreground py-4 pr-6">
-                    {formatEventDate(event.created_date)}
+                    <TooltipProvider>
+                      <Tooltip delayDuration={200}>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-pointer hover:text-foreground transition-colors duration-200">
+                            {formatEventDate(event.created_date)}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          className="bg-popover/95 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm border border-border/50"
+                          sideOffset={5}
+                        >
+                          <p className="text-sm font-medium text-popover-foreground">
+                            {new Date(event.created_date).toLocaleDateString(
+                              "en-US",
+                              {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                              }
+                            )}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))}

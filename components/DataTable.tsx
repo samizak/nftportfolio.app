@@ -22,6 +22,7 @@ import { CollectionData } from "@/types/nft";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatThousandSeparator } from "@/utils/formatters";
+import { PackageX } from "lucide-react"; // Add this import at the top
 
 interface DataTableProps {
   data: CollectionData[];
@@ -55,7 +56,6 @@ export function DataTable({
     console.error("DataTable received invalid data:", data);
     return <div>No data available</div>;
   }
-
   // Add a loading state when we have a totalValue but no data yet
   if (data.length === 0 && totalValue > 0) {
     return (
@@ -67,15 +67,23 @@ export function DataTable({
       </div>
     );
   }
-
   // Show a message when there's no data
   if (data.length === 0) {
     return (
-      <div className="rounded-md border p-8 text-center">
-        <p className="text-muted-foreground">No NFT collections found</p>
-        <p className="text-sm text-muted-foreground mt-2">
-          Try searching for a different wallet address
-        </p>
+      <div className="rounded-md border flex flex-col items-center justify-center min-h-[190px] p-8 text-center bg-muted/30">
+        <div className="space-y-4">
+          <div className="rounded-full bg-muted/50 p-3 w-fit mx-auto">
+            <PackageX className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-xl font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              No NFT collections found
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Try searching for a different wallet address
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -226,9 +234,15 @@ export function DataTable({
                   )}
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-1">
-                      <span className="font-medium truncate hover:text-blue-600 transition-colors cursor-pointer">
+                      <a
+                        href={`https://opensea.io/collection/${collection.collection}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium truncate max-w-[200px] text-base hover:text-blue-600 transition-colors inline-block"
+                      >
                         {collection.name}
-                      </span>
+                      </a>
+
                       {collection.is_verified && (
                         <TooltipProvider>
                           <Tooltip>

@@ -45,12 +45,6 @@ export default function RootLayout({
             <CurrencyProvider>
               <EthPriceProvider>
                 <GasPriceProvider>
-                  <div className="fixed top-4 right-4 flex items-center gap-2 z-50">
-                    <div className="mr-2">
-                      <CurrencySelector />
-                    </div>
-                    <ThemeToggle />
-                  </div>
                   <div className="min-h-screen overflow-x-hidden">
                     {children}
                   </div>
