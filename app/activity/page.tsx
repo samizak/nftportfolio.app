@@ -147,6 +147,7 @@ export default function ActivityPage() {
           collection: event.nft?.collection,
           image_url: event.nft?.image_url,
           display_image_url: event.nft?.display_image_url,
+          contract: event.nft?.contract,
         },
         payment: {
           quantity: event?.payment?.quantity,
@@ -208,10 +209,6 @@ export default function ActivityPage() {
           <UserProfile user={user} />
         )}
 
-        <h1 className="text-3xl font-bold my-8 text-center">
-          Activity History
-        </h1>
-
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6 text-center shadow-sm">
             {error}
@@ -221,7 +218,7 @@ export default function ActivityPage() {
         {loading ? (
           <ActivitySkeleton />
         ) : (
-          <div className="rounded-lg border shadow-md overflow-hidden">
+          <div className="overflow-hidden">
             {events.length === 0 ? (
               <div className="text-center py-16 bg-muted/20 rounded-lg border border-muted">
                 <p className="text-muted-foreground mb-3 text-xl font-medium">

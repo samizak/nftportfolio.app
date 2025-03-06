@@ -209,24 +209,24 @@ export function DataTable({
               className="hover:bg-muted/20 transition-colors"
             >
               <TableCell className="w-[40%] py-3 pl-4">
-                <div className="flex items-center space-x-3 min-w-0">
+                <div className="flex items-center space-x-3 min-w-0 group">
                   {collection.image_url ? (
-                    <div className="relative h-10 w-10 flex-shrink-0 rounded-md overflow-hidden">
+                    <div className="relative h-10 w-10 flex-shrink-0 rounded-md overflow-hidden border border-muted transition-all duration-200 group-hover:shadow-md group-hover:scale-105">
                       <Image
                         src={collection.image_url}
                         alt={collection.name}
                         fill
                         sizes="40px"
-                        className="object-cover"
+                        className="object-cover transition-transform duration-300 group-hover:scale-110"
                         unoptimized={collection.image_url.endsWith(".gif")}
                       />
                     </div>
                   ) : (
-                    <div className="h-10 w-10 flex-shrink-0 rounded-md bg-gray-200 dark:bg-gray-800"></div>
+                    <div className="h-10 w-10 flex-shrink-0 rounded-md bg-gray-200 dark:bg-gray-800 transition-all duration-200 group-hover:shadow-md group-hover:scale-105"></div>
                   )}
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-1">
-                      <span className="font-medium truncate">
+                      <span className="font-medium truncate hover:text-blue-600 transition-colors cursor-pointer">
                         {collection.name}
                       </span>
                       {collection.is_verified && (
@@ -248,7 +248,7 @@ export function DataTable({
                         </TooltipProvider>
                       )}
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate hover:text-blue-500 transition-colors cursor-pointer">
                       {collection.collection}
                     </span>
                   </div>
