@@ -11,9 +11,10 @@ export const metadata: Metadata = {
 export default async function PortfolioPage({
   searchParams,
 }: {
-  searchParams: { id?: string };
+  searchParams: Promise<{ id?: string }>;
 }) {
-  const id = searchParams.id || null;
+  const params = await searchParams;
+  const id = params.id || "";
 
   return (
     <Suspense
