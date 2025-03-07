@@ -25,7 +25,7 @@ export default function Footer() {
         <div className="flex items-center gap-2">
           <HoverCard>
             <HoverCardTrigger asChild>
-              <div className="flex items-center gap-1.5 font-medium cursor-help">
+              <div className="flex items-center gap-1.5 font-medium cursor-pointer">
                 <div className="relative flex items-center">
                   <Image
                     src="/live-pulse.svg"
@@ -60,7 +60,7 @@ export default function Footer() {
                       : "Updating..."}
                   </div>
                 </div>
-                
+
                 <div className="space-y-2 border-b pb-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Image
@@ -77,7 +77,7 @@ export default function Footer() {
                     {gasPrice ? new Date().toLocaleString() : "Updating..."}
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Image

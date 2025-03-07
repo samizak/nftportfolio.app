@@ -86,9 +86,16 @@ export default function Header({ user, activePage }: HeaderProps) {
               </button>
             </div>
             {validationError && (
-              <div className="absolute -bottom-8 left-0 right-0 px-3 py-1.5 text-xs rounded-md bg-destructive/90 text-destructive-foreground shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 flex items-center gap-1.5">
-                <AlertCircle className="h-3.5 w-3.5" />
-                {validationError}
+              <div
+                className="absolute -bottom-9 left-0 right-0 px-3 py-1.5 rounded-md 
+              bg-destructive/90 text-white shadow-md animate-in fade-in 
+              slide-in-from-top-2 duration-200 flex items-center gap-1.5
+              border border-destructive-foreground/20"
+              >
+                <AlertCircle className="h-4 w-4 stroke-[2.5px] text-white" />
+                <span className="text-sm font-medium tracking-tight">
+                  {validationError}
+                </span>
               </div>
             )}
           </form>
