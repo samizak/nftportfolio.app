@@ -1,24 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { fetchWithRetry } from "@/lib/fetchWithRetry";
-import { useUser } from "@/context/UserContext";
 import { ActivityEvent } from "@/components/activity/ActivityTable";
-import { useRouter } from "next/navigation";
-import { isAddress } from "ethers";
 import ActivityView from "@/components/ActivityView";
 import LoadingScreen from "@/components/LoadingScreen";
-import { usePortfolioData } from "@/hooks/usePortfolioData";
 import { Loader2 } from "lucide-react";
+import { useUserData } from "@/hooks/useUserData";
+import { usePortfolioData } from "@/hooks/usePortfolioData";
 
 export default function ActivityPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
-  const [isValidAddress, setIsValidAddress] = useState<boolean | null>(null);
-  const [ethAddress, setEthAddress] = useState<string | null>(null);
-  const [isResolvingENS, setIsResolvingENS] = useState<boolean>(false);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,185 +25,33 @@ export default function ActivityPage() {
   });
 
   const {
-    userData,
-    ensData,
-    setUserData,
-    setEnsData,
-    isLoading,
-    setIsLoading,
-    setError: setUserError,
-  } = useUser();
-
-  // Validate and resolve address if needed
-  useEffect(() => {
-    const validateAndResolveAddress = async () => {
-      if (!id) {
-        setIsValidAddress(false);
-        router.push("/");
-        return;
-      }
-
-      const isEthAddress = isAddress(id);
-      const isEnsName = id.toLowerCase().endsWith(".eth");
-
-      if (!isEthAddress && !isEnsName) {
-        console.warn("Invalid Ethereum address or ENS name:", id);
-        setIsValidAddress(false);
-        router.push("/");
-        return;
-      }
-
-      if (isEthAddress) {
-        // Direct Ethereum address
-        setEthAddress(id);
-        setIsValidAddress(true);
-      } else if (isEnsName) {
-        // ENS name needs resolution
-        setIsResolvingENS(true);
-        try {
-          const resolveResponse = await fetchWithRetry(
-            `/api/user/ens/resolve?id=${id}`
-          );
-
-          if (!resolveResponse?.ok) {
-            throw new Error("Failed to resolve ENS name");
-          }
-
-          const resolveJson = await resolveResponse.json();
-
-          if (!resolveJson.address) {
-            throw new Error("No address found for this ENS name");
-          }
-
-          setEthAddress(resolveJson.address);
-          setIsValidAddress(true);
-        } catch (error) {
-          console.error("ENS resolution error:", error);
-          setError(
-            error instanceof Error
-              ? error.message
-              : "Failed to resolve ENS name"
-          );
-          setIsValidAddress(false);
-        } finally {
-          setIsResolvingENS(false);
-        }
-      }
-    };
-
-    validateAndResolveAddress();
-  }, [id, router]);
-
-  // Modify the existing useEffect to only run if address is valid
-  useEffect(() => {
-    if (!ethAddress || !isValidAddress) {
-      return;
-    }
-
-    fetchUserData();
-    fetchActivity();
-  }, [ethAddress, isValidAddress]);
+    user,
+    isLoading: isUserLoading,
+    isResolvingAddress,
+    error: userError,
+  } = useUserData(id);
 
   const {
     collections,
-    ethPrice,
-    totalNfts,
-    totalValue,
     fetchingNFTs,
     fetchProgress,
-  } = usePortfolioData(isValidAddress && ethAddress ? ethAddress : null);
+    resolvedAddress,
+    isValidAddress,
+  } = usePortfolioData(id);
 
-  const fetchUserData = async () => {
-    if (!ethAddress) return;
-
-    try {
-      setIsLoading(true);
-      setUserError(null);
-
-      // Fetch ENS data
-      const ensResponse = await fetchWithRetry(
-        `/api/user/ens?id=${ethAddress}`
-      );
-      if (!ensResponse) {
-        console.error("No ENS response received");
-        setUserError("Failed to fetch ENS data");
-        setIsLoading(false);
-        return;
-      }
-
-      const ensJson = await ensResponse.json();
-      setEnsData(ensJson);
-
-      try {
-        const userResponse = await fetchWithRetry(
-          `/api/user/profile?id=${ethAddress}`
-        );
-        if (!userResponse) {
-          console.error("No user profile response received");
-          setUserError("Failed to fetch user profile");
-          setIsLoading(false);
-          return;
-        }
-
-        const userJson = await userResponse.json();
-
-        if (userJson.error) {
-          setUserData({
-            address: ethAddress,
-            username:
-              ensJson?.ens ||
-              `${ethAddress.substring(0, 6)}...${ethAddress.substring(
-                ethAddress.length - 4
-              )}`,
-            profile_image_url: "",
-            banner_image_url: "",
-            joined_date: "",
-          });
-        } else {
-          setUserData(userJson);
-        }
-      } catch (userError) {
-        console.warn("Error fetching user profile:", userError);
-        setUserData({
-          address: ethAddress,
-          username:
-            ensJson?.ens ||
-            `${ethAddress.substring(0, 6)}...${ethAddress.substring(
-              ethAddress.length - 4
-            )}`,
-          profile_image_url: "",
-          banner_image_url: "",
-          joined_date: "",
-        });
-      }
-    } catch (err) {
-      console.error("Error in data fetching:", err);
-      if (err instanceof Error && !err.message.includes("not found")) {
-        setUserError(err.message || "An error occurred");
-      } else {
-        setUserData({
-          address: ethAddress,
-          username: `${ethAddress.substring(0, 6)}...${ethAddress.substring(
-            ethAddress.length - 4
-          )}`,
-          profile_image_url: "",
-          banner_image_url: "",
-          joined_date: "",
-        });
-        setEnsData({
-          ens: "",
-          address: "",
-        });
-      }
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    if (userError && userError.includes("Invalid address")) {
+      router.push("/");
     }
-  };
+  }, [userError, router]);
 
-  // In your activity page or component where you fetch events
-  const fetchActivity = async () => {
-    if (!ethAddress) return;
-
+  useEffect(() => {
+    if (!resolvedAddress || !isValidAddress) {
+      return;
+    }
+    fetchActivity(resolvedAddress);
+  }, [resolvedAddress, isValidAddress]);
+  const fetchActivity = async (address: string) => {
     setLoading(true);
     setError(null);
     setEvents([]);
@@ -218,17 +61,14 @@ export default function ActivityPage() {
       currentPage: 0,
       totalPages: 20, // Initial estimate
     });
-
     try {
       // Create SSE connection
       const eventSource = new EventSource(
-        `/api/events/by-account?address=${ethAddress}&maxPages=20`
+        `/api/events/by-account?address=${address}&maxPages=20`
       );
-
       // Handle incoming events
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
-
         switch (data.type) {
           case "progress":
             // Update loading state with progress info
@@ -240,22 +80,18 @@ export default function ActivityPage() {
               totalPages: data.totalPages || prev.totalPages,
             }));
             break;
-
           case "chunk":
             // Append new events to the existing list
             setEvents((currentEvents) => [...currentEvents, ...data.events]);
             break;
-
           case "complete":
             // All data has been received
             setLoading(false);
             console.log(
               `Completed: ${data.totalEvents} events across ${data.totalPages} pages`
             );
-
             eventSource.close();
             break;
-
           case "error":
             // Handle errors
             setError(data.error || "An error occurred while fetching data");
@@ -264,14 +100,12 @@ export default function ActivityPage() {
             break;
         }
       };
-
       // Handle connection errors
       eventSource.onerror = () => {
         setError("Connection error. Please try again later.");
         setLoading(false);
         eventSource.close();
       };
-
       // Clean up function to close connection if component unmounts
       return () => {
         eventSource.close();
@@ -286,34 +120,18 @@ export default function ActivityPage() {
       setLoading(false);
     }
   };
-
-  const user = {
-    name:
-      userData?.username ||
-      (ethAddress
-        ? `${ethAddress.substring(0, 6)}...${ethAddress.substring(
-            ethAddress.length - 4
-          )}`
-        : ""),
-    ethHandle: ensData?.ens || (id?.toLowerCase().endsWith(".eth") ? id : ""),
-    ethAddress: userData?.address || ethAddress || "",
-    avatar: userData?.profile_image_url || "",
-    banner: userData?.banner_image_url || "",
-  };
-
   return (
     <>
-      {(fetchingNFTs || isResolvingENS) && (
+      {(fetchingNFTs || isResolvingAddress) && (
         <LoadingScreen
           status={
-            isResolvingENS ? "Resolving ENS name..." : fetchProgress.status
+            isResolvingAddress ? "Resolving ENS name..." : fetchProgress.status
           }
           count={fetchProgress.count}
           startTime={fetchProgress.startTime}
         />
       )}
-
-      {isLoading || !userData || !ensData ? (
+      {isUserLoading || !user ? (
         <div className="fixed inset-0 flex items-center justify-center">
           <div className="flex flex-col items-center space-y-3">
             <Loader2 className="h-8 w-8 animate-spin" />
