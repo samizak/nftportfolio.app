@@ -10,12 +10,18 @@ import { usePortfolioData } from "@/hooks/usePortfolioData";
 import { ArrowLeft } from "lucide-react"; // Add this import
 import { Button } from "@/components/ui/button"; // Add this import
 import { useRouter } from "next/navigation"; // Add this import
+import { ActivityEvent } from "@/components/activity/ActivityTable";
+import { useState } from "react";
 
 export default function AddressPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
   const { selectedCurrency } = useCurrency();
+  const [isValidAddress, setIsValidAddress] = useState<boolean | null>(null);
+  const [ethAddress, setEthAddress] = useState<string | null>(null);
+  const [isResolvingENS, setIsResolvingENS] = useState<boolean>(false);
+  const [events, setEvents] = useState<ActivityEvent[]>([]);
 
   const { user, isLoading: isUserLoading, error: userError } = useUserData(id);
   const {
@@ -69,9 +75,11 @@ export default function AddressPage() {
 
   return (
     <>
-      {fetchingNFTs && (
+      {(fetchingNFTs || isResolvingENS) && (
         <LoadingScreen
-          status={fetchProgress.status}
+          status={
+            isResolvingENS ? "Resolving ENS name..." : fetchProgress.status
+          }
           count={fetchProgress.count}
           startTime={fetchProgress.startTime}
         />
@@ -85,14 +93,16 @@ export default function AddressPage() {
           </div>
         </div>
       ) : (
-        user && <PortfolioView
-          user={user}
-          data={collections}
-          ethPrice={ethPrice}
-          totalNfts={totalNfts}
-          totalValue={totalValue}
-          selectedCurrency={selectedCurrency}
-        />
+        user && (
+          <PortfolioView
+            user={user}
+            data={collections}
+            ethPrice={ethPrice}
+            totalNfts={totalNfts}
+            totalValue={totalValue}
+            selectedCurrency={selectedCurrency}
+          />
+        )
       )}
     </>
   );
