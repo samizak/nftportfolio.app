@@ -9,6 +9,7 @@ import Footer from "./layout/Footer";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { isAddress } from "ethers";
+import HeaderLandingPage from "./layout/HeaderLandingPage";
 
 export default function LandingPage({
   address,
@@ -45,6 +46,7 @@ export default function LandingPage({
 
   return (
     <div className="flex flex-col min-h-screen overflow-hidden">
+      <HeaderLandingPage />
       <main className="flex-grow flex flex-col items-center justify-center p-4 md:p-8 pb-20">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
