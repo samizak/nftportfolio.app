@@ -188,6 +188,9 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                             fill
                             sizes="56px"
                             className="object-cover transition-transform duration-300 group-hover:scale-110"
+                            unoptimized={event.nft.display_image_url.endsWith(
+                              ".gif"
+                            )}
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-muted/30">
