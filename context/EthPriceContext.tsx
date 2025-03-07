@@ -20,7 +20,7 @@ export function EthPriceProvider({ children }: { children: React.ReactNode }) {
 
   const fetchEthPrice = async () => {
     try {
-      const response = await fetch("/api/fetch-ethereum-prices");
+      const response = await fetch("/api/market/ethereum-prices");
       const data = await response.json();
 
       if (data.ethPrice) {

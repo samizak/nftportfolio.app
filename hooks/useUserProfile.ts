@@ -27,7 +27,7 @@ export function useUserProfile(id: string | null) {
         setError(null);
 
         // Fetch ENS data
-        const ensResponse = await fetchWithRetry(`/api/get-ens?id=${id}`);
+        const ensResponse = await fetchWithRetry(`/api/user/ens?id=${id}`);
         if (!ensResponse) return;
         const ensJson = await ensResponse.json();
         setEnsData(ensJson);
@@ -35,7 +35,7 @@ export function useUserProfile(id: string | null) {
         // Fetch user profile data
         try {
           const userResponse = await fetchWithRetry(
-            `/api/get-user-profile?id=${id}`
+            `/api/user/profile?id=${id}`
           );
           if (!userResponse) return;
           const userJson = await userResponse.json();

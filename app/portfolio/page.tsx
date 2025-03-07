@@ -73,7 +73,7 @@ export default function AddressPage() {
         setIsLoading(true);
         setError(null);
 
-        const ensResponse = await fetchWithRetry(`/api/get-ens?id=${id}`);
+        const ensResponse = await fetchWithRetry(`/api/user/ens?id=${id}`);
         if (!ensResponse) {
           console.error("No ENS response received");
           setError("Failed to fetch ENS data");
@@ -86,7 +86,7 @@ export default function AddressPage() {
 
         try {
           const userResponse = await fetchWithRetry(
-            `/api/get-user-profile?id=${id}`
+            `/api/user/profile?id=${id}`
           );
           if (!userResponse) {
             console.error("No user profile response received");
@@ -196,7 +196,6 @@ export default function AddressPage() {
     avatar: userData?.profile_image_url || "",
     banner: userData?.banner_image_url || "",
   };
-
   return (
     <>
       {fetchingNFTs && (

@@ -69,11 +69,11 @@ async function cleanupCache() {
   });
 }
 
-export async function GET(req: any, res: any) {
+export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const address = searchParams.get("address");
   const next = searchParams.get("next") || "";
-  const maxPages = searchParams.get("maxPages") || "5"; // Allow client to control max pages
+  const maxPages = searchParams.get("maxPages") || "5";
 
   if (!address) {
     return NextResponse.json(

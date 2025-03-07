@@ -18,7 +18,7 @@ export function GasPriceProvider({ children }: { children: React.ReactNode }) {
 
   const fetchGasPrice = async () => {
     try {
-      const response = await fetch(`/api/get-gas-price`);
+      const response = await fetch(`/api/market/gas`);
       const data = await response.json();
 
       if (data.gasPrices && data.gasPrices.currentGasPrice) {

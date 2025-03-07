@@ -45,7 +45,7 @@ export function usePortfolioData(id: string | null) {
           }));
 
           // Use the improved API that fetches multiple pages at once
-          const url = `/api/get-nft-by-account?address=${id}${
+          const url = `/api/nft/by-account?address=${id}${
             _next ? `&next=${_next}` : ""
           }&maxPages=5`; // Fetch 5 pages at once (1000 NFTs)
 

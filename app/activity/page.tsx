@@ -101,7 +101,7 @@ export default function ActivityPage() {
       setUserError(null);
 
       // Fetch ENS data
-      const ensResponse = await fetchWithRetry(`/api/get-ens?id=${id}`);
+      const ensResponse = await fetchWithRetry(`/api/user/ens?id=${id}`);
       if (!ensResponse) {
         console.error("No ENS response received");
         setUserError("Failed to fetch ENS data");
@@ -113,9 +113,7 @@ export default function ActivityPage() {
       setEnsData(ensJson);
 
       try {
-        const userResponse = await fetchWithRetry(
-          `/api/get-user-profile?id=${id}`
-        );
+        const userResponse = await fetchWithRetry(`/api/user/profile?id=${id}`);
         if (!userResponse) {
           console.error("No user profile response received");
           setUserError("Failed to fetch user profile");
@@ -187,7 +185,7 @@ export default function ActivityPage() {
     try {
       // Create SSE connection
       const eventSource = new EventSource(
-        `/api/get-events-by-account?address=${id}&maxPages=20`
+        `/api/events/by-account?address=${id}&maxPages=20`
       );
 
       // Handle incoming events
