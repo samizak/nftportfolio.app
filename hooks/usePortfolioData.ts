@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useUser } from "@/context/UserContext";
 import { useEthPrice } from "@/context/EthPriceContext";
 import { fetchWithRetry } from "../lib/fetchWithRetry";
 import { CollectionData } from "@/types/nft";
+import { useEnsResolver } from "@/hooks/useEnsResolver";
 
 export function usePortfolioData(id: string | null) {
   const { setError, setIsLoading } = useUser();
@@ -19,8 +20,28 @@ export function usePortfolioData(id: string | null) {
   });
   const [fetchingNFTs, setFetchingNFTs] = useState(false);
 
-  // Collections fetch effect
+  // Use ENS resolver hook to handle address validation and resolution
+  const {
+    ethAddress,
+    isEnsName,
+    isValidAddress,
+    isResolving,
+    error: resolverError,
+  } = useEnsResolver(id, setError);
+
+  // Set error from resolver if present
   useEffect(() => {
+    if (resolverError) {
+      setError(resolverError);
+    }
+  }, [resolverError, setError]);
+
+  // Collections fetch effect - only run when we have a valid resolved address
+  useEffect(() => {
+    if (!ethAddress || !isValidAddress) {
+      return;
+    }
+
     const fetchCollectionsAndInfo = async () => {
       try {
         setIsLoading(true);
@@ -35,6 +56,7 @@ export function usePortfolioData(id: string | null) {
         let _collectionArray: any[] = [];
         let _next = "";
         let batchCount = 0;
+        let maxBatches = 10; // Add a safety limit to prevent infinite loops
 
         do {
           batchCount++;
@@ -44,15 +66,25 @@ export function usePortfolioData(id: string | null) {
             count: _collectionArray.length,
           }));
 
-          // Use the improved API that fetches multiple pages at once
-          const url = `/api/nft/by-account?address=${id}${
-            _next ? `&next=${_next}` : ""
+          // Use the resolved address for API calls
+          const url = `/api/nft/by-account?address=${ethAddress}${
+            _next ? `&next=${encodeURIComponent(_next)}` : ""
           }&maxPages=5`; // Fetch 5 pages at once (1000 NFTs)
+
+          console.log(`Fetching batch ${batchCount}, URL: ${url}`);
 
           // Use fetchWithRetry instead of regular fetch
           const response = await fetchWithRetry(url);
-          if (!response) return;
+          if (!response) {
+            console.error("No response received from API");
+            break; // Break the loop if no response
+          }
+
           const nftByAccountResponse = await response.json();
+          console.log(`Batch ${batchCount} response:`, {
+            nftsCount: nftByAccountResponse.nfts?.length || 0,
+            next: nftByAccountResponse.next || "none",
+          });
 
           if (nftByAccountResponse.nfts?.length) {
             _collectionArray = [
@@ -66,7 +98,27 @@ export function usePortfolioData(id: string | null) {
             }));
           }
 
+          // Store the next cursor and check if it's the same as before
+          const previousNext = _next;
           _next = nftByAccountResponse.next || "";
+
+          // Break the loop if we get the same cursor twice or if we've reached our batch limit
+          if (
+            _next === previousNext ||
+            _next === "" ||
+            batchCount >= maxBatches
+          ) {
+            console.log(
+              `Breaking loop: ${
+                _next === previousNext
+                  ? "Same cursor"
+                  : _next === ""
+                  ? "Empty cursor"
+                  : "Max batches reached"
+              }`
+            );
+            break;
+          }
         } while (_next);
 
         // Update total NFTs count
@@ -158,19 +210,33 @@ export function usePortfolioData(id: string | null) {
       }
     };
 
-    if (id) {
-      fetchCollectionsAndInfo();
-    } else {
-      setIsLoading(false);
-    }
-  }, [id, setError, setIsLoading]);
+    fetchCollectionsAndInfo();
+  }, [ethAddress, isValidAddress, setError, setIsLoading]);
 
-  return {
-    collections,
-    ethPrice,
-    totalNfts,
-    totalValue,
-    fetchingNFTs,
-    fetchProgress,
-  };
+  const memoizedValues = useMemo(
+    () => ({
+      collections,
+      ethPrice,
+      totalNfts,
+      totalValue,
+      fetchingNFTs,
+      fetchProgress,
+      isResolvingENS: isResolving,
+      resolvedAddress: ethAddress,
+      isValidAddress,
+    }),
+    [
+      collections,
+      ethPrice,
+      totalNfts,
+      totalValue,
+      fetchingNFTs,
+      fetchProgress,
+      isResolving,
+      ethAddress,
+      isValidAddress,
+    ]
+  );
+
+  return memoizedValues;
 }
