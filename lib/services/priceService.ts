@@ -27,6 +27,8 @@ class PriceService {
   private retryCount: number = 0;
   private maxRetries: number = 5;
   private retryDelay: number = 60 * 1000; // 1 minute in milliseconds
+  private lastRequestTime: number = 0;
+  private minRequestInterval: number = 10 * 1000; // Minimum 10 seconds between requests
 
   private constructor() {
     this.client = new MongoClient(process.env.MONGODB_URI || "");
@@ -44,7 +46,9 @@ class PriceService {
   // New initialization method that runs on startup
   private async initialize(): Promise<void> {
     try {
-      console.log(`[${new Date().toISOString()}] Initializing price service...`);
+      console.log(
+        `[${new Date().toISOString()}] Initializing price service...`
+      );
       const existingPrices = await this.getPrices();
       if (!existingPrices) {
         console.log("No existing prices found, fetching from API...");
@@ -61,8 +65,22 @@ class PriceService {
   }
 
   private async fetchPrices(): Promise<PriceData | null> {
+    // Implement rate limiting
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      const waitTime = this.minRequestInterval - timeSinceLastRequest;
+      console.log(`Rate limiting: waiting ${waitTime}ms before next request`);
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+    }
+
+    this.lastRequestTime = Date.now();
+
     try {
-      console.log(`[${new Date().toISOString()}] Fetching ETH prices from CoinGecko...`);
+      console.log(
+        `[${new Date().toISOString()}] Fetching ETH prices from CoinGecko...`
+      );
       const response = await fetch(
         "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,eur,gbp,jpy,aud,cad,cny",
         {
@@ -73,12 +91,29 @@ class PriceService {
         }
       );
 
+      // Special handling for rate limiting
+      if (response.status === 429) {
+        console.warn("Rate limit exceeded (429). Backing off...");
+        // Get retry-after header if available or use exponential backoff
+        const retryAfter = response.headers.get("retry-after");
+        const waitTime = retryAfter
+          ? parseInt(retryAfter, 10) * 1000
+          : Math.pow(2, this.retryCount) * 30 * 1000;
+        console.log(`Will retry after ${waitTime / 1000} seconds`);
+
+        // Update retry delay for next attempt
+        this.retryDelay = waitTime;
+        return null;
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log(`[${new Date().toISOString()}] ETH prices fetched successfully`);
+      console.log(
+        `[${new Date().toISOString()}] ETH prices fetched successfully`
+      );
       this.retryCount = 0; // Reset retry count on successful fetch
       return {
         prices: data.ethereum,
@@ -91,23 +126,39 @@ class PriceService {
     }
   }
 
-  // Updated updatePrices method with retry logic
+  // Updated updatePrices method with improved retry logic
   private async updatePrices(): Promise<void> {
     const prices = await this.fetchPrices();
-    
+
     if (!prices) {
       if (this.retryCount < this.maxRetries) {
         this.retryCount++;
-        console.log(`[${new Date().toISOString()}] Fetch attempt ${this.retryCount}/${this.maxRetries} failed. Retrying in ${this.retryDelay/1000} seconds...`);
-        
+        // Use exponential backoff for retries
+        const backoffDelay = Math.min(
+          this.retryDelay * Math.pow(2, this.retryCount - 1),
+          15 * 60 * 1000 // Cap at 15 minutes
+        );
+
+        console.log(
+          `[${new Date().toISOString()}] [PriceService] Fetch attempt ${
+            this.retryCount
+          }/${this.maxRetries} failed. Retrying in ${
+            backoffDelay / 1000
+          } seconds...`
+        );
+
         // Schedule a retry after the delay
         setTimeout(() => {
           this.updatePrices();
-        }, this.retryDelay);
-        
+        }, backoffDelay);
+
         return;
       } else {
-        console.log(`[${new Date().toISOString()}] Maximum retry attempts (${this.maxRetries}) reached. Using default values.`);
+        console.log(
+          `[${new Date().toISOString()}] Maximum retry attempts (${
+            this.maxRetries
+          }) reached. Using default values.`
+        );
         this.retryCount = 0; // Reset for next update cycle
         await this.saveDefaultPrices();
         return;
@@ -138,9 +189,7 @@ class PriceService {
     }
   }
 
-  // Fix for the getPrices method to handle type conversion properly
   public async getPrices(): Promise<PriceData | null> {
-    // Wait for initialization to complete before returning prices
     await this.initialized;
 
     try {
@@ -168,7 +217,7 @@ class PriceService {
       await this.client.close();
     }
   }
-  
+
   // Save default prices if API fails
   private async saveDefaultPrices(): Promise<void> {
     try {
@@ -198,7 +247,7 @@ class PriceService {
       await this.client.close();
     }
   }
-  
+
   // Updated to fetch every 5 minutes instead of 2
   private startUpdateCycle(): void {
     this.updateInterval = setInterval(() => {

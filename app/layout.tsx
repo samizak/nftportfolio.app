@@ -4,9 +4,9 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { UserProvider } from "@/context/UserContext";
 import { CurrencyProvider } from "@/context/CurrencyContext";
-import { EthPriceProvider } from "@/context/EthPriceContext";
-import { GasPriceProvider } from "@/context/GasPriceContext";
 import { Toaster } from "sonner";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import QueryProvider from "@/components/QueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,25 +33,22 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <UserProvider>
-            <CurrencyProvider>
-              <EthPriceProvider>
-                <GasPriceProvider>
-                  <div className="min-h-screen overflow-x-hidden">
-                    {children}
-                  </div>
-                  <Toaster position="top-right" />
-                </GasPriceProvider>
-              </EthPriceProvider>
-            </CurrencyProvider>
-          </UserProvider>
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <UserProvider>
+              <CurrencyProvider>
+                <div className="min-h-screen overflow-x-hidden">{children}</div>
+                <Toaster position="top-right" />
+              </CurrencyProvider>
+            </UserProvider>
+          </ThemeProvider>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </QueryProvider>
       </body>
     </html>
   );

@@ -1,21 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import { useEthPrice } from "@/context/EthPriceContext";
-import { useCurrency } from "@/context/CurrencyContext";
-import { useGasPrice } from "@/context/GasPriceContext";
-import { formatCurrency } from "@/lib/utils";
+
 import { containerClass } from "@/lib/utils";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { GasPrice } from "../footer/GasPrice";
+import { EthPrice } from "../footer/EthPrice";
+import { useFormattedEthPrice } from "@/hooks/useEthPriceQuery";
+import { useGasPriceQuery } from "@/hooks/useGasPriceQuery";
 
 export default function Footer() {
-  const { gasPrice } = useGasPrice();
-  const { ethPrice, lastUpdated } = useEthPrice(); // Add lastUpdated from context
-  const { selectedCurrency } = useCurrency();
+  const { lastUpdated: lastUpdatedGas } = useGasPriceQuery();
+  const { lastUpdated: lastUpdatedPrice } = useFormattedEthPrice();
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 w-full py-2 bg-background/80 backdrop-blur-sm border-t text-sm text-muted-foreground z-[60]">
@@ -55,8 +55,8 @@ export default function Footer() {
                   </div>
                   <div className="text-xs text-muted-foreground">
                     ETH Price • Last updated:{" "}
-                    {lastUpdated
-                      ? new Date(lastUpdated).toLocaleString()
+                    {lastUpdatedPrice
+                      ? lastUpdatedPrice.toLocaleString()
                       : "Updating..."}
                   </div>
                 </div>
@@ -74,7 +74,9 @@ export default function Footer() {
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Gas Price • Last updated:{" "}
-                    {gasPrice ? new Date().toLocaleString() : "Updating..."}
+                    {lastUpdatedGas
+                      ? lastUpdatedGas.toLocaleString()
+                      : "Updating..."}{" "}
                   </div>
                 </div>
 
@@ -102,24 +104,9 @@ export default function Footer() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 transition-colors hover:text-foreground">
-            <Image
-              src="/ethereum-eth-logo.svg"
-              alt="Ethereum-logo"
-              width={12}
-              height={12}
-              style={{ height: "auto" }}
-            />
-            <span>
-              {formatCurrency(
-                ethPrice,
-                selectedCurrency.code,
-                selectedCurrency.symbol
-              )}
-            </span>
-          </div>
+          <EthPrice />
           <div className="text-border/60">|</div>
-          <div className="transition-colors hover:text-foreground">{`${gasPrice} GWEI`}</div>
+          <GasPrice />
         </div>
       </div>
     </footer>

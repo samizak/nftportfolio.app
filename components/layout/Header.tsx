@@ -56,7 +56,6 @@ export default function Header({ user, activePage }: HeaderProps) {
             </h1>
           </div>
 
-          {/* Search form - now responsive with different sizes */}
           <form
             onSubmit={handleSearch}
             className="max-w-md w-full mx-4 relative hidden sm:block lg:max-w-xs xl:max-w-md"

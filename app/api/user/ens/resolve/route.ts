@@ -49,18 +49,19 @@ async function resolveWithRetry(
   }
   return null;
 }
-
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const ensName = searchParams.get("id");
 
+  // Add better error logging
+  // console.log(`Resolving ENS name: ${ensName}`);
   if (!ensName) {
+    console.error("Missing ENS name parameter");
     return NextResponse.json(
-      { error: "Missing ENS name (name query parameter)" },
+      { error: "Missing ENS name (id query parameter)" },
       { status: 400 }
     );
   }
-
   try {
     // Connect to MongoDB
     const mongoClient = await connectToDatabase();

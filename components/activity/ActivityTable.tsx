@@ -74,11 +74,9 @@ interface ActivityTableProps {
 }
 
 export default function ActivityTable({ events }: ActivityTableProps) {
-  // Add pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
 
-  // Calculate pagination values
   const totalPages = Math.ceil(events.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, events.length);

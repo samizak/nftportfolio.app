@@ -15,11 +15,11 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
   const { selectedCurrency } = useCurrency();
 
   // Use the existing hooks for user data and portfolio data
-  const { 
-    user, 
-    isLoading: isUserLoading, 
+  const {
+    user,
+    isLoading: isUserLoading,
     isResolvingAddress,
-    error: userError 
+    error: userError,
   } = useUserData(id);
 
   const {
@@ -31,6 +31,8 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
     fetchProgress,
   } = usePortfolioData(id);
 
+  // Remove this console.log that might be causing unnecessary renders
+  // console.log(fetchingNFTs, isResolvingAddress);
   if (userError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-background to-background/50">

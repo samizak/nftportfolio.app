@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useUser } from "@/context/UserContext";
-import { useEthPrice } from "@/context/EthPriceContext";
+import { useFormattedEthPrice } from "@/hooks/useEthPriceQuery";
 import { fetchWithRetry } from "../lib/fetchWithRetry";
 import { CollectionData } from "@/types/nft";
-import { useEnsResolver } from "@/hooks/useEnsResolver";
+import { useAddressResolver } from "@/hooks/useUserQuery"; // Updated import
 
 export function usePortfolioData(id: string | null) {
   const { setError, setIsLoading } = useUser();
-  const { ethPrice } = useEthPrice(); // Get ethPrice from context
+  const { price: ethPrice } = useFormattedEthPrice();
   const [collections, setCollections] = useState<CollectionData[]>([]);
   const [totalNfts, setTotalNfts] = useState(0);
   const [totalValue, setTotalValue] = useState(0);
@@ -19,7 +19,8 @@ export function usePortfolioData(id: string | null) {
     startTime: 0,
   });
   const [fetchingNFTs, setFetchingNFTs] = useState(false);
-
+  // Add this at the top of your usePortfolioData function
+  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
   // Use ENS resolver hook to handle address validation and resolution
   const {
     ethAddress,
@@ -27,22 +28,32 @@ export function usePortfolioData(id: string | null) {
     isValidAddress,
     isResolving,
     error: resolverError,
-  } = useEnsResolver(id, setError);
-
+  } = useAddressResolver(id);
   // Set error from resolver if present
   useEffect(() => {
     if (resolverError) {
       setError(resolverError);
     }
   }, [resolverError, setError]);
-
   // Collections fetch effect - only run when we have a valid resolved address
   useEffect(() => {
     if (!ethAddress || !isValidAddress) {
       return;
     }
-
     const fetchCollectionsAndInfo = async () => {
+      // Clear any existing timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      // Set a safety timeout to ensure loading state is reset after 2 minutes
+      const newTimeoutId = setTimeout(() => {
+        console.log("Safety timeout triggered - resetting loading states");
+        setIsLoading(false);
+        setFetchingNFTs(false);
+      }, 120000); // 2 minutes
+
+      setTimeoutId(newTimeoutId);
+
       try {
         setIsLoading(true);
         setFetchingNFTs(true);
@@ -51,12 +62,11 @@ export function usePortfolioData(id: string | null) {
           count: 0,
           startTime: Date.now(),
         });
-
         // Fetch NFTs with fewer API calls
         let _collectionArray: any[] = [];
         let _next = "";
         let batchCount = 0;
-        let maxBatches = 10; // Add a safety limit to prevent infinite loops
+        let maxBatches = 50; // Add a safety limit to prevent infinite loops
 
         do {
           batchCount++;
@@ -65,7 +75,6 @@ export function usePortfolioData(id: string | null) {
             status: `Fetching NFTs (batch ${batchCount})...`,
             count: _collectionArray.length,
           }));
-
           // Use the resolved address for API calls
           const url = `/api/nft/by-account?address=${ethAddress}${
             _next ? `&next=${encodeURIComponent(_next)}` : ""
@@ -97,11 +106,9 @@ export function usePortfolioData(id: string | null) {
               count: _collectionArray.length,
             }));
           }
-
           // Store the next cursor and check if it's the same as before
           const previousNext = _next;
           _next = nftByAccountResponse.next || "";
-
           // Break the loop if we get the same cursor twice or if we've reached our batch limit
           if (
             _next === previousNext ||
@@ -120,7 +127,6 @@ export function usePortfolioData(id: string | null) {
             break;
           }
         } while (_next);
-
         // Update total NFTs count
         setTotalNfts(_collectionArray.length);
         setFetchProgress((prev) => ({
@@ -128,14 +134,12 @@ export function usePortfolioData(id: string | null) {
           status: "Processing collections...",
           count: _collectionArray.length,
         }));
-
         // Calculate collection frequencies - optimized with reduce
         const nftFreqMap = _collectionArray.reduce((acc, nft) => {
           if (!nft.collection) return acc;
           acc.set(nft.collection, (acc.get(nft.collection) || 0) + 1);
           return acc;
         }, new Map());
-
         // Skip further processing if no collections found
         if (nftFreqMap.size === 0) {
           setCollections([]);
@@ -144,22 +148,18 @@ export function usePortfolioData(id: string | null) {
           setFetchingNFTs(false);
           return;
         }
-
         const nftData = Array.from(nftFreqMap, ([collection, count]) => ({
           collection,
           count,
         }));
-
         // Extract collection slugs and filter out any undefined/null values
         const collectionSlugs = nftData
           .map((item) => item.collection)
           .filter(Boolean);
-
         setFetchProgress((prev) => ({
           ...prev,
           status: `Fetching data for ${collectionSlugs.length} collections...`,
         }));
-
         // Use batch-collections API with error handling and retry
         const batchResponse = await fetchWithRetry("/api/batch-collections", {
           method: "POST",
@@ -169,14 +169,12 @@ export function usePortfolioData(id: string | null) {
         if (!batchResponse) return;
         const batchData = await batchResponse.json();
         const collectionsData = batchData.data || {};
-
         // Process collection data - optimized with map and reduce
         const collectionDetails = nftData.map((item) => {
           const collectionSlug = item.collection;
           const collectionInfo = collectionsData[collectionSlug]?.info || {};
           const priceInfo = collectionsData[collectionSlug]?.price || {};
           const floorPrice = priceInfo.floor_price || 0;
-
           return {
             collection: collectionSlug,
             name: collectionInfo.name || collectionSlug,
@@ -187,13 +185,11 @@ export function usePortfolioData(id: string | null) {
             total_value: floorPrice * item.count,
           };
         });
-
         // Calculate total value in one pass
         const totalPortfolioValue = collectionDetails.reduce(
           (sum, item) => sum + (item.total_value || 0),
           0
         );
-
         // Update state with all data at once
         setTotalValue(totalPortfolioValue);
         setCollections(collectionDetails);
@@ -205,18 +201,24 @@ export function usePortfolioData(id: string | null) {
             : "Failed to fetch collection data"
         );
       } finally {
+        // Clear the timeout since we're done
+        clearTimeout(newTimeoutId);
         setIsLoading(false);
         setFetchingNFTs(false);
       }
     };
-
     fetchCollectionsAndInfo();
+    // Cleanup function
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [ethAddress, isValidAddress, setError, setIsLoading]);
-
   const memoizedValues = useMemo(
     () => ({
       collections,
-      ethPrice,
+      ethPrice, // This now comes from useFormattedEthPrice
       totalNfts,
       totalValue,
       fetchingNFTs,
@@ -227,7 +229,7 @@ export function usePortfolioData(id: string | null) {
     }),
     [
       collections,
-      ethPrice,
+      ethPrice, // Update dependency array
       totalNfts,
       totalValue,
       fetchingNFTs,

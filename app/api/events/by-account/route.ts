@@ -45,6 +45,8 @@ export async function GET(request: NextRequest) {
   const maxPages = parseInt(searchParams.get("maxPages") || "20");
   const forceRefresh = searchParams.get("refresh") === "true";
 
+  console.log(forceRefresh);
+
   if (!walletAddress) {
     return new Response(
       JSON.stringify({ error: "Wallet address is required" }),
@@ -57,10 +59,12 @@ export async function GET(request: NextRequest) {
 
   // Connect to MongoDB
   await dbConnect();
+
   // Check for existing events
   const existingEvents = await Event.find({
     walletAddress,
   }).sort({ timestamp: -1 });
+
   // If we have data and no force refresh, return it directly
   if (existingEvents.length > 0 && !forceRefresh) {
     console.log(
@@ -83,10 +87,28 @@ export async function GET(request: NextRequest) {
       },
     });
   }
+
+  // If force refresh is true, clear existing events for this wallet
+  if (forceRefresh && existingEvents.length > 0) {
+    console.log(
+      `Force refresh requested for ${walletAddress}, clearing existing events`
+    );
+    try {
+      await Event.deleteMany({ walletAddress });
+      console.log(
+        `Cleared ${existingEvents.length} events for ${walletAddress}`
+      );
+    } catch (error) {
+      console.error(`Error clearing events for ${walletAddress}:`, error);
+      // Continue with fetching even if clearing fails
+    }
+  }
+
   // For fresh data, set up a new SSE response
   const encoder = new TextEncoder();
   const stream = new TransformStream();
   const writer = stream.writable.getWriter();
+
   // If no recent data or force refresh, fetch from OpenSea
   fetchAllEvents(walletAddress, maxPages, writer).catch((error) => {
     console.error("Error in SSE stream:", error);
@@ -95,6 +117,7 @@ export async function GET(request: NextRequest) {
     );
     writer.close();
   });
+
   return new Response(stream.readable, {
     headers: {
       "Content-Type": "text/event-stream",
@@ -123,7 +146,7 @@ async function sendCachedData(
           pageCount: 0,
           currentPage: 0,
           totalPages: 1,
-          percentage: 0
+          percentage: 0,
         })}\n\n`
       )
     );
@@ -193,7 +216,7 @@ async function fetchAllEvents(
           currentPage: 0,
           totalPages: maxPages, // Initial estimate
           percentage: 0,
-          startTime
+          startTime,
         })}\n\n`
       )
     );
@@ -207,7 +230,7 @@ async function fetchAllEvents(
 
       // Calculate percentage based on current progress
       const percentage = Math.min(Math.round((pageCount / maxPages) * 100), 99);
-      
+
       // Send enhanced progress update
       await writer.write(
         encoder.encode(
@@ -219,7 +242,7 @@ async function fetchAllEvents(
             totalPages: maxPages,
             percentage,
             totalEventsSoFar: totalEvents,
-            elapsedTime: Date.now() - startTime
+            elapsedTime: Date.now() - startTime,
           })}\n\n`
         )
       );
@@ -252,7 +275,7 @@ async function fetchAllEvents(
                 isRateLimited: true,
                 retryCount,
                 totalEventsSoFar: totalEvents,
-                elapsedTime: Date.now() - startTime
+                elapsedTime: Date.now() - startTime,
               })}\n\n`
             )
           );
@@ -308,7 +331,7 @@ async function fetchAllEvents(
             created_date: new Date(e.event_timestamp * 1000),
             transaction: e.transaction,
             nft: {
-              display_image_url: e.nft?.image_url || "",
+              display_image_url: e.nft?.display_image_url || "",
               identifier: e.nft?.identifier || "",
               name: e.nft?.name || "",
               image_url: e.nft?.image_url || "",
@@ -367,10 +390,13 @@ async function fetchAllEvents(
         } events for wallet ${walletAddress} (page ${pageCount + 1})`
       );
       totalEvents += events.length;
-      
+
       // Calculate updated percentage after processing this page
-      const updatedPercentage = Math.min(Math.round(((pageCount + 1) / maxPages) * 100), 99);
-      
+      const updatedPercentage = Math.min(
+        Math.round(((pageCount + 1) / maxPages) * 100),
+        99
+      );
+
       // Send chunk of events to client with updated progress info
       await writer.write(
         encoder.encode(
@@ -382,7 +408,7 @@ async function fetchAllEvents(
             currentPage: pageCount + 1,
             totalPages: maxPages,
             percentage: updatedPercentage,
-            elapsedTime: Date.now() - startTime
+            elapsedTime: Date.now() - startTime,
           })}\n\n`
         )
       );
@@ -400,9 +426,10 @@ async function fetchAllEvents(
           type: "complete",
           totalPages: pageCount,
           totalEvents,
-          hasMore: pageCount >= maxPages && nextCursor !== null && nextCursor !== "",
+          hasMore:
+            pageCount >= maxPages && nextCursor !== null && nextCursor !== "",
           percentage: 100,
-          elapsedTime: Date.now() - startTime
+          elapsedTime: Date.now() - startTime,
         })}\n\n`
       )
     );

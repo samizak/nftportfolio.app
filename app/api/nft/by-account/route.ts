@@ -81,6 +81,15 @@ export async function GET(req: Request) {
       { status: 400 }
     );
   }
+  if (address.toLowerCase().endsWith(".eth")) {
+    return NextResponse.json(
+      {
+        error:
+          "ENS names are not supported. Please provide a valid Ethereum address (0x...)",
+      },
+      { status: 400 }
+    );
+  }
 
   // Create a cache key from address and next cursor
   const cacheKey = `${address.toLowerCase()}_${next}`;
