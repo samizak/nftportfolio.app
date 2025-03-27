@@ -5,20 +5,13 @@ export async function POST(req: Request) {
   try {
     const { collections } = await req.json();
 
-    // console.log(`[${new Date().toISOString()}] Batch collections API called with ${collections?.length || 0} collections`);
-
     if (!collections || !Array.isArray(collections)) {
-      // console.log(`[${new Date().toISOString()}] Invalid request format: ${JSON.stringify(collections)}`);
       return NextResponse.json(
         { error: "Invalid request format. Expected array of collection slugs" },
         { status: 400 }
       );
     }
 
-    // Log the collection slugs being requested
-    // console.log(`[${new Date().toISOString()}] Collection slugs: ${JSON.stringify(collections)}`);
-
-    // Connect to MongoDB
     const client = new MongoClient(process.env.MONGODB_URI || "");
     await client.connect();
     const database = client.db("nft-portfolio");
@@ -31,7 +24,6 @@ export async function POST(req: Request) {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    // Get all cached data first
     const cachedCollections = await collectionsDb
       .find({
         collection: { $in: collections },
@@ -46,7 +38,6 @@ export async function POST(req: Request) {
       })
       .toArray();
 
-    // Determine which collections need fresh data
     const cachedCollectionSlugs = new Set(
       cachedCollections.map((c) => c.collection)
     );
@@ -59,21 +50,8 @@ export async function POST(req: Request) {
       (slug) => !cachedPriceSlugs.has(slug)
     );
 
-    // console.log(
-    //   `[${new Date().toISOString()}] Using cached data for ${
-    //     cachedCollections.length
-    //   } collections and ${cachedPrices.length} prices`
-    // );
-    // console.log(
-    //   `[${new Date().toISOString()}] Need to fetch ${
-    //     collectionsToFetch.length
-    //   } collections and ${pricesToFetch.length} prices`
-    // );
-
-    // Prepare response object with cached data
     const result: any = {};
 
-    // Add cached collection data
     cachedCollections.forEach((collection) => {
       if (!result[collection.collection]) {
         result[collection.collection] = {};
@@ -81,7 +59,6 @@ export async function POST(req: Request) {
       result[collection.collection].info = collection;
     });
 
-    // Add cached price data
     cachedPrices.forEach((price) => {
       if (!result[price.collection]) {
         result[price.collection] = {};
@@ -89,17 +66,8 @@ export async function POST(req: Request) {
       result[price.collection].price = price;
     });
 
-    // Fetch missing collection data if needed
     if (collectionsToFetch.length > 0) {
-      // console.log(
-      //   `[${new Date().toISOString()}] Fetching collection data for: ${collectionsToFetch.join(
-      //     ", "
-      //   )}`
-      // );
-
-      // Add more detailed logging for the API request
       const apiUrl = `https://api.opensea.io/api/v2/collections/batch`;
-      // console.log(`[${new Date().toISOString()}] Making request to: ${apiUrl}`);
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -110,40 +78,11 @@ export async function POST(req: Request) {
         body: JSON.stringify({ collections: collectionsToFetch }),
       });
 
-      // Log the response status and headers
-      // console.log(
-      //   `[${new Date().toISOString()}] OpenSea API response status: ${
-      //     response.status
-      //   }`
-      // );
-      // console.log(
-      //   `[${new Date().toISOString()}] OpenSea API response headers: ${JSON.stringify(
-      //     Object.fromEntries([...response.headers.entries()])
-      //   )}`
-      // );
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(
-          `[${new Date().toISOString()}] OpenSea API error: ${errorText}`
-        );
-        // Continue with cached data instead of failing completely
       } else {
         const data = await response.json();
 
-        // Log the response data structure
-        // console.log(
-        //   `[${new Date().toISOString()}] OpenSea API response data structure: ${Object.keys(
-        //     data
-        //   ).join(", ")}`
-        // );
-        // console.log(
-        //   `[${new Date().toISOString()}] Collections returned: ${
-        //     data.collections?.length || 0
-        //   }`
-        // );
-
-        // Process and store the new collection data
         if (data.collections && data.collections.length > 0) {
           for (const collection of data.collections) {
             const collectionData = {
@@ -155,14 +94,12 @@ export async function POST(req: Request) {
               timestamp: new Date(),
             };
 
-            // Store in database
             await collectionsDb.updateOne(
               { collection: collectionData.collection },
               { $set: collectionData },
               { upsert: true }
             );
 
-            // Add to result
             if (!result[collection.collection]) {
               result[collection.collection] = {};
             }
@@ -172,20 +109,10 @@ export async function POST(req: Request) {
       }
     }
 
-    // Fetch missing price data if needed
     if (pricesToFetch.length > 0) {
-      // console.log(
-      //   `[${new Date().toISOString()}] Fetching price data for: ${pricesToFetch.join(
-      //     ", "
-      //   )}`
-      // );
-
       for (const slug of pricesToFetch) {
         try {
           const openseaUrl = `https://api.opensea.io/api/v2/listings/collection/${slug}/best`;
-          // console.log(
-          //   `[${new Date().toISOString()}] Making price request to: ${openseaUrl}`
-          // );
 
           const response = await fetch(openseaUrl, {
             method: "GET",
@@ -196,19 +123,10 @@ export async function POST(req: Request) {
           });
 
           if (!response.ok) {
-            console.error(
-              `[${new Date().toISOString()}] Error fetching price for ${slug}: ${
-                response.status
-              }`
-            );
             continue;
           }
 
           const data = await response.json();
-          // console.log(
-          //   `[${new Date().toISOString()}] Price data for ${slug}:`,
-          //   JSON.stringify(data)
-          // );
 
           const floorData = data.listings[0]?.price?.current?.value || 0;
 
@@ -223,24 +141,17 @@ export async function POST(req: Request) {
             timestamp: new Date(),
           };
 
-          // Store in database
           await priceCache.updateOne(
             { collection: slug },
             { $set: priceData },
             { upsert: true }
           );
 
-          // Add to result
           if (!result[slug]) {
             result[slug] = {};
           }
           result[slug].price = priceData;
-        } catch (error) {
-          console.error(
-            `[${new Date().toISOString()}] Error fetching price for ${slug}:`,
-            error
-          );
-        }
+        } catch (error) {}
       }
     }
 
@@ -252,10 +163,6 @@ export async function POST(req: Request) {
       missingPrices: pricesToFetch,
     });
   } catch (error) {
-    console.error(
-      `[${new Date().toISOString()}] Error in batch collections API:`,
-      error
-    );
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
