@@ -45,8 +45,6 @@ export async function GET(request: NextRequest) {
   const maxPages = parseInt(searchParams.get("maxPages") || "20");
   const forceRefresh = searchParams.get("refresh") === "true";
 
-  console.log({ "events/by-account -> force refresh": forceRefresh });
-
   if (!walletAddress) {
     return new Response(
       JSON.stringify({ error: "Wallet address is required" }),
@@ -57,26 +55,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Connect to MongoDB
   await dbConnect();
 
-  // Check for existing events
   const existingEvents = await Event.find({
     walletAddress,
   }).sort({ timestamp: -1 });
 
-  // If we have data and no force refresh, return it directly
   if (existingEvents.length > 0 && !forceRefresh) {
-    console.log(
-      `Found ${existingEvents.length} cached events for ${walletAddress}`
-    );
-
-    // Create a new stream for cached data
     const encoder = new TextEncoder();
     const cachedStream = new TransformStream();
     const cachedWriter = cachedStream.writable.getWriter();
 
-    // Send data in a separate function to avoid blocking
     sendCachedData(cachedWriter, existingEvents, encoder);
 
     return new Response(cachedStream.readable, {
@@ -88,30 +77,17 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // If force refresh is true, clear existing events for this wallet
   if (forceRefresh && existingEvents.length > 0) {
-    console.log(
-      `Force refresh requested for ${walletAddress}, clearing existing events`
-    );
     try {
       await Event.deleteMany({ walletAddress });
-      console.log(
-        `Cleared ${existingEvents.length} events for ${walletAddress}`
-      );
-    } catch (error) {
-      console.error(`Error clearing events for ${walletAddress}:`, error);
-      // Continue with fetching even if clearing fails
-    }
+    } catch (error) {}
   }
 
-  // For fresh data, set up a new SSE response
   const encoder = new TextEncoder();
   const stream = new TransformStream();
   const writer = stream.writable.getWriter();
 
-  // If no recent data or force refresh, fetch from OpenSea
   fetchAllEvents(walletAddress, maxPages, writer).catch((error) => {
-    console.error("Error in SSE stream:", error);
     writer.write(
       encoder.encode(`data: ${JSON.stringify({ error: "Stream error" })}\n\n`)
     );
@@ -127,17 +103,12 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// Separate function to send cached data
-// In the sendCachedData function, improve the progress message
 async function sendCachedData(
   writer: WritableStreamDefaultWriter,
   events: any[],
   encoder: TextEncoder
 ) {
   try {
-    console.log("Starting to send cached data");
-
-    // Send progress message with more details
     await writer.write(
       encoder.encode(
         `data: ${JSON.stringify({
@@ -150,9 +121,7 @@ async function sendCachedData(
         })}\n\n`
       )
     );
-    console.log("Progress message sent");
 
-    // Send all events in one chunk
     await writer.write(
       encoder.encode(
         `data: ${JSON.stringify({
@@ -163,9 +132,7 @@ async function sendCachedData(
         })}\n\n`
       )
     );
-    console.log("Events chunk sent");
 
-    // Send completion message
     await writer.write(
       encoder.encode(
         `data: ${JSON.stringify({
@@ -177,9 +144,7 @@ async function sendCachedData(
         })}\n\n`
       )
     );
-    console.log("Complete message sent");
   } catch (error) {
-    console.error("Error sending cached data:", error);
     await writer.write(
       encoder.encode(
         `data: ${JSON.stringify({
@@ -189,12 +154,9 @@ async function sendCachedData(
       )
     );
   } finally {
-    console.log("Closing writer");
     await writer.close();
-    console.log("Writer closed");
   }
 }
-// In the fetchAllEvents function, enhance the progress updates
 async function fetchAllEvents(
   walletAddress: string,
   maxPages: number,
@@ -207,14 +169,13 @@ async function fetchAllEvents(
   const startTime = Date.now();
 
   try {
-    // Initial progress message with estimated total pages
     await writer.write(
       encoder.encode(
         `data: ${JSON.stringify({
           type: "progress",
           message: "Initializing data fetch...",
           currentPage: 0,
-          totalPages: maxPages, // Initial estimate
+          totalPages: maxPages,
           percentage: 0,
           startTime,
         })}\n\n`
@@ -222,16 +183,13 @@ async function fetchAllEvents(
     );
 
     do {
-      // Build URL with cursor if available
       let url = `https://api.opensea.io/api/v2/events/accounts/${walletAddress}?chain=ethereum&event_type=sale&event_type=cancel&event_type=transfer&limit=50`;
       if (nextCursor) {
         url += `&next=${nextCursor}`;
       }
 
-      // Calculate percentage based on current progress
       const percentage = Math.min(Math.round((pageCount / maxPages) * 100), 99);
 
-      // Send enhanced progress update
       await writer.write(
         encoder.encode(
           `data: ${JSON.stringify({
@@ -247,7 +205,6 @@ async function fetchAllEvents(
         )
       );
 
-      // Add retry logic for rate limiting
       let retryCount = 0;
       let response: Response | undefined;
       let success = false;
@@ -262,7 +219,6 @@ async function fetchAllEvents(
 
         if (response.status === 429) {
           retryCount++;
-          // Enhanced rate limit notification
           await writer.write(
             encoder.encode(
               `data: ${JSON.stringify({
@@ -279,14 +235,12 @@ async function fetchAllEvents(
               })}\n\n`
             )
           );
-          // Wait 5 seconds before retrying
           await new Promise((resolve) => setTimeout(resolve, 5000));
         } else {
           success = true;
         }
       }
 
-      // If we've exhausted all retries and still getting rate limited
       if (!success || !response) {
         await writer.write(
           encoder.encode(
@@ -302,7 +256,6 @@ async function fetchAllEvents(
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error("OpenSea API error:", response.status, errorData);
         await writer.write(
           encoder.encode(
             `data: ${JSON.stringify({
@@ -318,8 +271,6 @@ async function fetchAllEvents(
 
       const data = await response.json();
 
-      // In the fetchAllEvents function, update the events mapping:
-      // In the events mapping, ensure unique IDs:
       const events: NFTEvent[] = data.asset_events.map(
         (e: any, index: number) => {
           const fallbackId = `${e.transaction?.hash || "tx"}-${
@@ -381,23 +332,15 @@ async function fetchAllEvents(
           upsert: true,
         },
       }));
-      // Use bulkWrite instead of multiple updateOne operations
       await Event.bulkWrite(bulkOps, { ordered: false });
-      // Add logging to track operations
-      console.log(
-        `Processed ${
-          eventsToStore.length
-        } events for wallet ${walletAddress} (page ${pageCount + 1})`
-      );
+
       totalEvents += events.length;
 
-      // Calculate updated percentage after processing this page
       const updatedPercentage = Math.min(
         Math.round(((pageCount + 1) / maxPages) * 100),
         99
       );
 
-      // Send chunk of events to client with updated progress info
       await writer.write(
         encoder.encode(
           `data: ${JSON.stringify({
@@ -412,14 +355,10 @@ async function fetchAllEvents(
           })}\n\n`
         )
       );
-      // Update cursor for next page
       nextCursor = data.next;
       pageCount++;
-      // Add a small delay to prevent rate limiting
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Wait 500ms
-      // Stop if we've reached max pages or there's no next cursor
+      await new Promise((resolve) => setTimeout(resolve, 500));
     } while (nextCursor && nextCursor !== "" && pageCount < maxPages);
-    // Send completion message with final stats
     await writer.write(
       encoder.encode(
         `data: ${JSON.stringify({
@@ -434,7 +373,6 @@ async function fetchAllEvents(
       )
     );
   } catch (error) {
-    console.error("Error fetching OpenSea events:", error);
     await writer.write(
       encoder.encode(
         `data: ${JSON.stringify({
