@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { ethers } from "ethers";
 import { MongoClient } from "mongodb";
 
-// MongoDB connection
 let client: MongoClient | null = null;
 
 async function connectToDatabase() {
@@ -15,14 +14,12 @@ async function connectToDatabase() {
   return client;
 }
 
-// Create provider with retry logic
 const createProvider = () => {
   const provider = new ethers.JsonRpcProvider(
     "https://mainnet.infura.io/v3/" + process.env.INFURA_API_KEY
   );
 
   provider.on("error", (error) => {
-    console.error("Provider error:", error);
     provider.destroy();
     return createProvider();
   });
@@ -41,37 +38,33 @@ async function resolveWithRetry(
       const address = await provider.resolveName(ensName);
       return address;
     } catch (error) {
-      console.error(`Attempt ${i + 1} failed:`, error);
       if (i < retries - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 60 * 1000)); // 1 minute delay
+        await new Promise((resolve) => setTimeout(resolve, 60 * 1000));
       }
     }
   }
   return null;
 }
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const ensName = searchParams.get("id");
 
-  // Add better error logging
-  // console.log(`Resolving ENS name: ${ensName}`);
   if (!ensName) {
-    console.error("Missing ENS name parameter");
     return NextResponse.json(
       { error: "Missing ENS name (id query parameter)" },
       { status: 400 }
     );
   }
+
   try {
-    // Connect to MongoDB
     const mongoClient = await connectToDatabase();
     const db = mongoClient.db("nft-portfolio");
     const cacheCollection = db.collection("ens-cache");
 
-    // Check cache first
     const cached = await cacheCollection.findOne({
       ensName: ensName.toLowerCase(),
-      timestamp: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // 24 hour cache
+      timestamp: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
     });
 
     if (cached) {
@@ -82,7 +75,6 @@ export async function GET(req: Request) {
       });
     }
 
-    // Resolve ENS with retry logic
     const address = await resolveWithRetry(ensName);
 
     if (!address) {
@@ -92,7 +84,6 @@ export async function GET(req: Request) {
       );
     }
 
-    // Update cache
     await cacheCollection.updateOne(
       { ensName: ensName.toLowerCase() },
       {
@@ -111,7 +102,6 @@ export async function GET(req: Request) {
       cached: false,
     });
   } catch (error) {
-    console.error("ENS resolution error:", error);
     return NextResponse.json(
       {
         error:
