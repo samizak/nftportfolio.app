@@ -8,7 +8,6 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { Loader2 } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 import { usePortfolioData } from "@/hooks/usePortfolioData";
-import { VoidSigner } from "ethers";
 
 export function ActivityClientWrapper({
   id,
@@ -55,6 +54,7 @@ export function ActivityClientWrapper({
     }
     fetchActivity(resolvedAddress);
   }, [resolvedAddress, isValidAddress]);
+
   const fetchActivity = async (address: string) => {
     setLoading(true);
     setError(null);
@@ -63,26 +63,18 @@ export function ActivityClientWrapper({
       message: "Connecting to data source...",
       percentage: 0,
       currentPage: 0,
-      totalPages: 20, // Initial estimate
+      totalPages: 20,
     });
     try {
-      // Create SSE connection
       const eventSource = new EventSource(
         `/api/events/by-account?address=${address}&maxPages=20` +
           (forceRefresh && `&refresh=true`)
       );
-      // console.log(
-      //   `/api/events/by-account?address=${address}&maxPages=20` +
-      //     (forceRefresh && `&refresh=true`)
-      // );
 
-      // Handle incoming events
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
         switch (data.type) {
           case "progress":
-            // Update loading state with progress info
-            console.log(`Loading: ${data.message}`);
             setLoadingProgress((prev) => ({
               message: data.message || prev.message,
               percentage: data.percentage || prev.percentage,
@@ -91,37 +83,30 @@ export function ActivityClientWrapper({
             }));
             break;
           case "chunk":
-            // Append new events to the existing list
             setEvents((currentEvents) => [...currentEvents, ...data.events]);
             break;
           case "complete":
-            // All data has been received
             setLoading(false);
-            console.log(
-              `Completed: ${data.totalEvents} events across ${data.totalPages} pages`
-            );
             eventSource.close();
             break;
           case "error":
-            // Handle errors
             setError(data.error || "An error occurred while fetching data");
             setLoading(false);
             eventSource.close();
             break;
         }
       };
-      // Handle connection errors
+
       eventSource.onerror = () => {
         setError("Connection error. Please try again later.");
         setLoading(false);
         eventSource.close();
       };
-      // Clean up function to close connection if component unmounts
+
       return () => {
         eventSource.close();
       };
     } catch (err) {
-      console.error("Error setting up SSE:", err);
       setError(
         err instanceof Error
           ? err.message
