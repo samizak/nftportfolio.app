@@ -5,13 +5,20 @@ export async function POST(req: Request) {
   try {
     const { collections } = await req.json();
 
+    // console.log(`[${new Date().toISOString()}] Batch collections API called with ${collections?.length || 0} collections`);
+
     if (!collections || !Array.isArray(collections)) {
+      // console.log(`[${new Date().toISOString()}] Invalid request format: ${JSON.stringify(collections)}`);
       return NextResponse.json(
         { error: "Invalid request format. Expected array of collection slugs" },
         { status: 400 }
       );
     }
 
+    // Log the collection slugs being requested
+    // console.log(`[${new Date().toISOString()}] Collection slugs: ${JSON.stringify(collections)}`);
+
+    // Connect to MongoDB
     const client = new MongoClient(process.env.MONGODB_URI || "");
     await client.connect();
     const database = client.db("nft-portfolio");
@@ -52,7 +59,18 @@ export async function POST(req: Request) {
       (slug) => !cachedPriceSlugs.has(slug)
     );
 
-    // Prepare response object with cached data - MOVED THIS UP
+    // console.log(
+    //   `[${new Date().toISOString()}] Using cached data for ${
+    //     cachedCollections.length
+    //   } collections and ${cachedPrices.length} prices`
+    // );
+    // console.log(
+    //   `[${new Date().toISOString()}] Need to fetch ${
+    //     collectionsToFetch.length
+    //   } collections and ${pricesToFetch.length} prices`
+    // );
+
+    // Prepare response object with cached data
     const result: any = {};
 
     // Add cached collection data
@@ -71,66 +89,127 @@ export async function POST(req: Request) {
       result[price.collection].price = price;
     });
 
-    // Fetch missing collection data
-    const newCollectionData = await Promise.all(
-      collectionsToFetch.map(async (slug) => {
-        try {
-          const openseaUrl = `https://api.opensea.io/api/v2/collections/${slug}`;
-          const response = await fetch(openseaUrl, {
-            method: "GET",
-            headers: {
-              accept: "application/json",
-              "x-api-key": process.env.OPENSEA_API_KEY || "",
-            },
-          });
+    // Fetch missing collection data if needed
+    if (collectionsToFetch.length > 0) {
+      // console.log(
+      //   `[${new Date().toISOString()}] Fetching collection data for: ${collectionsToFetch.join(
+      //     ", "
+      //   )}`
+      // );
 
-          if (!response.ok) {
-            return null;
+      // Add more detailed logging for the API request
+      const apiUrl = `https://api.opensea.io/api/v2/collections/batch`;
+      // console.log(`[${new Date().toISOString()}] Making request to: ${apiUrl}`);
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-KEY": process.env.OPENSEA_API_KEY || "",
+        },
+        body: JSON.stringify({ collections: collectionsToFetch }),
+      });
+
+      // Log the response status and headers
+      // console.log(
+      //   `[${new Date().toISOString()}] OpenSea API response status: ${
+      //     response.status
+      //   }`
+      // );
+      // console.log(
+      //   `[${new Date().toISOString()}] OpenSea API response headers: ${JSON.stringify(
+      //     Object.fromEntries([...response.headers.entries()])
+      //   )}`
+      // );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `[${new Date().toISOString()}] OpenSea API error: ${errorText}`
+        );
+        // Continue with cached data instead of failing completely
+      } else {
+        const data = await response.json();
+
+        // Log the response data structure
+        // console.log(
+        //   `[${new Date().toISOString()}] OpenSea API response data structure: ${Object.keys(
+        //     data
+        //   ).join(", ")}`
+        // );
+        // console.log(
+        //   `[${new Date().toISOString()}] Collections returned: ${
+        //     data.collections?.length || 0
+        //   }`
+        // );
+
+        // Process and store the new collection data
+        if (data.collections && data.collections.length > 0) {
+          for (const collection of data.collections) {
+            const collectionData = {
+              collection: collection.collection,
+              name: collection.name,
+              description: collection.description,
+              image_url: collection.image_url,
+              safelist_status: collection.safelist_status,
+              timestamp: new Date(),
+            };
+
+            // Store in database
+            await collectionsDb.updateOne(
+              { collection: collectionData.collection },
+              { $set: collectionData },
+              { upsert: true }
+            );
+
+            // Add to result
+            if (!result[collection.collection]) {
+              result[collection.collection] = {};
+            }
+            result[collection.collection].info = collectionData;
           }
-
-          const data = await response.json();
-          const collectionData = {
-            collection: data.collection,
-            name: data.name,
-            description: data.description,
-            image_url: data.image_url,
-            safelist_status: data.safelist_status,
-            timestamp: new Date(),
-          };
-
-          // Store in database
-          await collectionsDb.updateOne(
-            { collection: collectionData.collection },
-            { $set: collectionData },
-            { upsert: true }
-          );
-
-          return collectionData;
-        } catch (error) {
-          console.error(`Error fetching collection ${slug}:`, error);
-          return null;
         }
-      })
-    );
+      }
+    }
 
-    // Fetch missing price data
-    const newPriceData = await Promise.all(
-      pricesToFetch.map(async (slug) => {
+    // Fetch missing price data if needed
+    if (pricesToFetch.length > 0) {
+      // console.log(
+      //   `[${new Date().toISOString()}] Fetching price data for: ${pricesToFetch.join(
+      //     ", "
+      //   )}`
+      // );
+
+      for (const slug of pricesToFetch) {
         try {
           const openseaUrl = `https://api.opensea.io/api/v2/listings/collection/${slug}/best`;
+          // console.log(
+          //   `[${new Date().toISOString()}] Making price request to: ${openseaUrl}`
+          // );
+
           const response = await fetch(openseaUrl, {
             method: "GET",
             headers: {
               accept: "application/json",
-              "x-api-key": process.env.OPENSEA_API_KEY || "",
+              "X-API-KEY": process.env.OPENSEA_API_KEY || "",
             },
           });
 
           if (!response.ok) {
-            return null;
+            console.error(
+              `[${new Date().toISOString()}] Error fetching price for ${slug}: ${
+                response.status
+              }`
+            );
+            continue;
           }
 
           const data = await response.json();
+          // console.log(
+          //   `[${new Date().toISOString()}] Price data for ${slug}:`,
+          //   JSON.stringify(data)
+          // );
+
           const floorData = data.listings[0]?.price?.current?.value || 0;
 
           let floorPrice = 0;
@@ -151,29 +230,19 @@ export async function POST(req: Request) {
             { upsert: true }
           );
 
-          return priceData;
+          // Add to result
+          if (!result[slug]) {
+            result[slug] = {};
+          }
+          result[slug].price = priceData;
         } catch (error) {
-          console.error(`Error fetching price for ${slug}:`, error);
-          return null;
+          console.error(
+            `[${new Date().toISOString()}] Error fetching price for ${slug}:`,
+            error
+          );
         }
-      })
-    );
-
-    // Add new collection data to result
-    newCollectionData.filter(Boolean).forEach((collection: any) => {
-      if (!result[collection.collection]) {
-        result[collection.collection] = {};
       }
-      result[collection.collection].info = collection;
-    });
-
-    // Add new price data to result
-    newPriceData.filter(Boolean).forEach((price: any) => {
-      if (!result[price.collection]) {
-        result[price.collection] = {};
-      }
-      result[price.collection].price = price;
-    });
+    }
 
     await client.close();
 
@@ -183,12 +252,12 @@ export async function POST(req: Request) {
       missingPrices: pricesToFetch,
     });
   } catch (error) {
-    console.error("Batch collections error:", error);
+    console.error(
+      `[${new Date().toISOString()}] Error in batch collections API:`,
+      error
+    );
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "An unknown error occurred",
-      },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
