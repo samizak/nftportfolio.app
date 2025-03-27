@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   const maxPages = parseInt(searchParams.get("maxPages") || "20");
   const forceRefresh = searchParams.get("refresh") === "true";
 
-  console.log(forceRefresh);
+  console.log({ "events/by-account -> force refresh": forceRefresh });
 
   if (!walletAddress) {
     return new Response(

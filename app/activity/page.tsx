@@ -11,10 +11,11 @@ export const metadata: Metadata = {
 export default async function ActivityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string }>;
+  searchParams: Promise<{ id?: string; refresh?: string }>;
 }) {
   const params = await searchParams;
   const id = params.id || "";
+  const forceRefresh = params.refresh === "true" || false;
 
   return (
     <Suspense
@@ -26,7 +27,7 @@ export default async function ActivityPage({
         />
       }
     >
-      <ActivityClientWrapper id={id} />
+      <ActivityClientWrapper id={id} forceRefresh={forceRefresh} />
     </Suspense>
   );
 }

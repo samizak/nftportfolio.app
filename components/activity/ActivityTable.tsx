@@ -82,10 +82,18 @@ export default function ActivityTable({ events }: ActivityTableProps) {
   const endIndex = Math.min(startIndex + itemsPerPage, events.length);
   const paginatedEvents = events.slice(startIndex, endIndex);
 
+  const [timeframe, setTimeframe] = useState("all");
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+
   return (
     <Card className="shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Activity History</CardTitle>
+        <CardTitle className="flex flex-col space-y-2">
+          <p>Activity History</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Last updated: {lastUpdated.toLocaleString()}
+          </p>
+        </CardTitle>
       </CardHeader>
 
       <CardContent>

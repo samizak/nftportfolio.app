@@ -11,7 +11,7 @@ import { isAddress } from "ethers";
 
 interface HeaderProps {
   user: User;
-  activePage: "portfolio" | "activity";
+  activePage: "portfolio" | "activity" | "overview";
 }
 
 export default function Header({ user, activePage }: HeaderProps) {
@@ -101,6 +101,16 @@ export default function Header({ user, activePage }: HeaderProps) {
 
           {/* Desktop navigation */}
           <div className="hidden sm:flex items-center gap-2">
+            <button
+              onClick={() => router.push(`/overview?id=${user.ethAddress}`)}
+              className={`px-3.5 cursor-pointer py-1.5 rounded-md text-sm mr-2 font-medium transition-all ${
+                activePage === "overview"
+                  ? "bg-primary/90 text-primary-foreground shadow-sm"
+                  : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
+              }`}
+            >
+              Overview
+            </button>
             <button
               onClick={() => router.push(`/portfolio?id=${user.ethAddress}`)}
               className={`px-3.5 cursor-pointer py-1.5 rounded-md text-sm mr-2 font-medium transition-all ${
@@ -209,6 +219,19 @@ export default function Header({ user, activePage }: HeaderProps) {
 
               {/* Mobile navigation */}
               <div className="flex flex-col space-y-2 pt-2">
+                <button
+                  onClick={() => {
+                    router.push(`/overview?id=${user.ethAddress}`);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`px-3.5 py-2 rounded-md text-sm font-medium transition-all ${
+                    activePage === "overview"
+                      ? "bg-primary/90 text-primary-foreground shadow-sm"
+                      : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
+                  }`}
+                >
+                  Overview
+                </button>
                 <button
                   onClick={() => {
                     router.push(`/portfolio?id=${user.ethAddress}`);

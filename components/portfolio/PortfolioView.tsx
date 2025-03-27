@@ -77,6 +77,9 @@ export default function PortfolioView({
     setFilteredData(applySearchAndFilters(searchQuery));
   };
 
+  const [timeframe, setTimeframe] = useState("all");
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+
   return (
     <div className="flex flex-col min-h-screen">
       <main className={`${containerClass} p-4 flex-grow pb-20`}>
@@ -105,7 +108,13 @@ export default function PortfolioView({
           <div>
             <Card className="h-full">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Your NFT Collection</CardTitle>
+                <CardTitle className="flex flex-col space-y-2">
+                  <p>Your NFT Collection</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Last updated: {lastUpdated.toLocaleString()}
+                  </p>
+                </CardTitle>
+
                 <div className="w-72">
                   <Input
                     placeholder="Search NFTs..."

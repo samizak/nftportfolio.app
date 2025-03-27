@@ -8,8 +8,15 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { Loader2 } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 import { usePortfolioData } from "@/hooks/usePortfolioData";
+import { VoidSigner } from "ethers";
 
-export function ActivityClientWrapper({ id }: { id: string }) {
+export function ActivityClientWrapper({
+  id,
+  forceRefresh,
+}: {
+  id: string;
+  forceRefresh: boolean;
+}) {
   const router = useRouter();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,8 +68,14 @@ export function ActivityClientWrapper({ id }: { id: string }) {
     try {
       // Create SSE connection
       const eventSource = new EventSource(
-        `/api/events/by-account?address=${address}&maxPages=20`
+        `/api/events/by-account?address=${address}&maxPages=20` +
+          (forceRefresh && `&refresh=true`)
       );
+      // console.log(
+      //   `/api/events/by-account?address=${address}&maxPages=20` +
+      //     (forceRefresh && `&refresh=true`)
+      // );
+
       // Handle incoming events
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);

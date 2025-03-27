@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import PortfolioView from "@/components/portfolio/PortfolioView";
 import { useCurrency } from "@/context/CurrencyContext";
