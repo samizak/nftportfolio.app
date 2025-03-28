@@ -2,7 +2,7 @@
 
 A comprehensive web application for tracking, analyzing, and visualizing your NFT portfolio across the Ethereum blockchain.
 
-## Prtfolio Page
+## Portfolio Page
 
 ![Portfolio Preview](public/portfolio-preview.png)
 
@@ -38,7 +38,7 @@ This is a [Next.js](https://nextjs.org) project. To run it locally:
 1.  **Clone the repository**
 
     ```bash
-    git clone https://github.com/yourusername/nft-portfolio-tracker.git
+    git clone https://github.com/samizak/nftportfolio.app.git
     ```
 
 2.  **Navigate to the project directory**
