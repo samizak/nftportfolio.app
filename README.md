@@ -140,6 +140,7 @@ To run this project, you'll need to set up the following environment variables i
 - `MONGODB_URI`: Your MongoDB connection string
 - `INFURA_API_KEY`: Infura API key for Ethereum data
 - `OPENSEA_API_KEY`: OpenSea API key for NFT data
+- `COINGECKO_API_KEY`: CoinGecko API key for cryptocurrency price data
 
 ⚠️ **Important**: Never commit your `.env.local` file to version control.
 
