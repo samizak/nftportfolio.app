@@ -190,13 +190,13 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                         {event.nft.display_image_url ? (
                           <Image
                             src={event.nft.display_image_url}
-                            alt={event.id}
+                            alt={`NFT image for ${
+                              event.nft.name || `#${event.nft.identifier}`
+                            }`}
                             fill
                             sizes="56px"
                             className="object-cover transition-transform duration-300 group-hover:scale-110"
-                            unoptimized={event.nft.display_image_url.endsWith(
-                              ".gif"
-                            )}
+                            unoptimized={true}
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-muted/30">
