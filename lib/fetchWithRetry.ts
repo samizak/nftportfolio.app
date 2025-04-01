@@ -30,9 +30,18 @@ export async function fetchWithRetry<T = any>(
     }
 
     if (!response.ok) {
-      if (response.status === 404) {
-        console.warn("404 - No NFTs found for this address");
+      // Handle 429 Too Many Requests - Trigger retry
+      if (response.status === 429) {
+        console.warn(`429 Too Many Requests for ${url}. Retrying...`);
+        throw new Error(`Retry triggered for status: ${response.status}`); // Throw generic error to trigger catch block
       }
+      // Handle 404 Not Found - Log and throw fatal error (no retry)
+      if (response.status === 404) {
+        console.warn(`404 Not Found for ${url}`);
+        // Potentially return null or a specific error shape instead of throwing if needed
+        throw new Error(`HTTP error! status: ${response.status} (Not Found)`);
+      }
+      // Handle other non-OK statuses - Throw fatal error (no retry)
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
