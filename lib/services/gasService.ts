@@ -6,6 +6,8 @@ interface GasData {
   isDefault?: boolean;
 }
 
+// Comment out the entire GasService class implementation
+/*
 class GasService {
   private static instance: GasService;
   private client: MongoClient;
@@ -183,6 +185,29 @@ class GasService {
     this.updateInterval = setInterval(() => {
       this.updateGasPrices().catch(() => {});
     }, 2 * 60 * 1000); // Update every 2 minutes
+  }
+}
+*/
+
+// Create a mock service that returns default values
+class GasService {
+  private static instance: GasService;
+
+  private constructor() {}
+
+  public static getInstance(): GasService {
+    if (!GasService.instance) {
+      GasService.instance = new GasService();
+    }
+    return GasService.instance;
+  }
+
+  public async getGasPrices(): Promise<any> {
+    return {
+      currentGasPrice: 50, // Default gas price in gwei
+      lastUpdated: new Date(),
+      isDefault: true,
+    };
   }
 }
 

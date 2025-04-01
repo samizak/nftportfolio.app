@@ -107,50 +107,41 @@ class PriceService {
     }
   }
 
-  private async updatePrices(): Promise<void> {
-    const prices = await this.fetchPrices();
+  // Add a mock implementation of updatePrices
+  private updatePrices(): void {
+    // This is a mock implementation that does nothing
+    // console.log("Price update is disabled");
+  }
 
-    if (!prices) {
-      if (this.retryCount < this.maxRetries) {
-        this.retryCount++;
-        const backoffDelay = Math.min(
-          this.retryDelay * Math.pow(2, this.retryCount - 1),
-          15 * 60 * 1000
-        );
-
-        setTimeout(() => {
-          this.updatePrices();
-        }, backoffDelay);
-
-        return;
-      } else {
-        this.retryCount = 0;
-        await this.saveDefaultPrices();
-        return;
-      }
-    }
-
+  // Comment out the saveDefaultPrices method
+  /*
+  private async saveDefaultPrices(): Promise<void> {
     try {
       await this.client.connect();
       const db = this.client.db("nft-portfolio");
       const priceCollection = db.collection("eth-prices");
-
-      await priceCollection.updateOne(
-        { _id: "latest" },
-        {
-          $set: {
-            prices: prices.prices,
-            lastUpdated: prices.lastUpdated,
-            isDefault: prices.isDefault,
+  
+      const existing = await priceCollection.findOne({ _id: "latest" });
+      if (!existing) {
+        await priceCollection.updateOne(
+          { _id: "latest" },
+          {
+            $set: {
+              prices: DEFAULT_ETH_PRICES,
+              lastUpdated: new Date(),
+              isDefault: true,
+            },
           },
-        },
-        { upsert: true }
-      );
+          { upsert: true }
+        );
+      }
     } catch (error) {
+      // Error handling
     } finally {
       await this.client.close();
     }
   }
+  */
 
   public async getPrices(): Promise<PriceData | null> {
     await this.initialized;
@@ -178,33 +169,7 @@ class PriceService {
     }
   }
 
-  private async saveDefaultPrices(): Promise<void> {
-    try {
-      await this.client.connect();
-      const db = this.client.db("nft-portfolio");
-      const priceCollection = db.collection("eth-prices");
-
-      const existing = await priceCollection.findOne({ _id: "latest" });
-      if (!existing) {
-        await priceCollection.updateOne(
-          { _id: "latest" },
-          {
-            $set: {
-              prices: DEFAULT_ETH_PRICES,
-              lastUpdated: new Date(),
-              isDefault: true,
-            },
-          },
-          { upsert: true }
-        );
-      }
-    } catch (error) {
-      // Error handling
-    } finally {
-      await this.client.close();
-    }
-  }
-
+  // In the startUpdateCycle method, make sure it uses the mock implementation
   private startUpdateCycle(): void {
     this.updateInterval = setInterval(() => {
       this.updatePrices();
