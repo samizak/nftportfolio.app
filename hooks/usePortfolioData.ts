@@ -172,54 +172,85 @@ export function usePortfolioData(id: string | null) {
           status: `Fetching data for ${collectionSlugs.length} collections...`,
         }));
 
-        // Batch fetch collection data using new API endpoint
-        const batchResponse = await fetchWithRetry(
-          "/api/collection/batch-collections",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ collections: collectionSlugs }),
-          }
-        );
-
-        if (!batchResponse || !batchResponse.data) {
-          throw new Error("Failed to fetch collection data");
+        // --- Batching Logic --- //
+        const BATCH_SIZE = 50;
+        const batches = [];
+        for (let i = 0; i < collectionSlugs.length; i += BATCH_SIZE) {
+          batches.push(collectionSlugs.slice(i, i + BATCH_SIZE));
         }
 
-        const collectionsData = batchResponse.data;
-
-        // Process collection data
-        const collectionDetails = collectionSlugs.map((slug) => {
-          const collectionInfo = collectionsData[slug]?.info || {};
-          const priceInfo = collectionsData[slug]?.price || {};
-          const floorPrice = priceInfo.floor_price || 0;
-          const count = nftsByCollection[slug].count;
-
-          return {
-            collection: slug,
-            name: collectionInfo.name || slug,
-            quantity: count,
-            image_url: collectionInfo.image_url || "",
-            is_verified: collectionInfo.safelist_status === "verified",
-            floor_price: floorPrice,
-            total_value: floorPrice * count,
-          };
-        });
-
-        // Calculate total value
-        const totalPortfolioValue = collectionDetails.reduce(
-          (sum, item) => sum + (item.total_value || 0),
-          0
+        console.log(
+          `Split into ${batches.length} batches of size ${BATCH_SIZE}`
         );
 
-        console.log(`Total portfolio value: ${totalPortfolioValue} ETH`);
+        // Fetch batches concurrently
+        const batchPromises = batches.map((batch, index) => {
+          console.log(`Fetching batch ${index + 1} of ${batches.length}...`);
+          return fetchWithRetry<{ data: Record<string, any> }>(
+            "/api/collection/batch-collections",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ collections: batch }),
+            }
+          );
+        });
 
-        // Update state with data
-        setTotalValue(totalPortfolioValue);
-        setCollections(collectionDetails);
+        // Wait for all batch requests to complete
+        const batchResults = await Promise.all(batchPromises);
+
+        // Combine results from all batches
+        const combinedCollectionsData = batchResults.reduce((acc, result) => {
+          if (result && result.data) {
+            return { ...acc, ...result.data };
+          }
+          return acc;
+        }, {} as Record<string, any>);
+        // --- End Batching Logic --- //
+
+        // Use the combined data
+        const collectionsData = combinedCollectionsData;
+
+        if (Object.keys(collectionsData).length === 0) {
+          // Handle case where no valid collection data was returned from any batch
+          console.warn("No valid collection data received after batching.");
+          setCollections([]);
+          setTotalValue(0);
+          // No need to throw error here, just proceed with empty data
+        } else {
+          // Process collection data (using the combined 'collectionsData')
+          const collectionDetails = collectionSlugs.map((slug) => {
+            const collectionInfo = collectionsData[slug]?.info || {};
+            const priceInfo = collectionsData[slug]?.price || {};
+            const floorPrice = priceInfo.floor_price || 0;
+            const count = nftsByCollection[slug].count;
+
+            return {
+              collection: slug,
+              name: collectionInfo.name || slug,
+              quantity: count,
+              image_url: collectionInfo.image_url || "",
+              is_verified: collectionInfo.safelist_status === "verified",
+              floor_price: floorPrice,
+              total_value: floorPrice * count,
+            };
+          });
+
+          // Calculate total value
+          const totalPortfolioValue = collectionDetails.reduce(
+            (sum, item) => sum + (item.total_value || 0),
+            0
+          );
+
+          console.log(`Total portfolio value: ${totalPortfolioValue} ETH`);
+
+          // Update state with data
+          setTotalValue(totalPortfolioValue);
+          setCollections(collectionDetails);
+        }
         console.log("Portfolio data update complete");
       } catch (error) {
-        console.error("Error fetching collection data:", error);
+        console.error("Error during portfolio data fetch/processing:", error);
         setError(
           error instanceof Error
             ? error.message
