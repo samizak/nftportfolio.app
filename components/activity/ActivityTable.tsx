@@ -250,7 +250,9 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                     </p>
                   </TableCell>
                   <TableCell className="py-5 font-medium text-base">
-                    <Badge variant="outline">{event.quantity || 1}</Badge>
+                    <Badge variant="outline">
+                      {event.event_type === "sale" ? 1 : event.quantity || 1}
+                    </Badge>
                   </TableCell>
                   <TableCell className="py-5 font-medium">
                     {event.from_account.address && (
@@ -327,7 +329,11 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                       <Tooltip delayDuration={200}>
                         <TooltipTrigger asChild>
                           <span className="cursor-pointer hover:text-foreground transition-colors duration-200">
-                            {formatEventDate(event.created_date)}
+                            {formatEventDate(
+                              new Date(
+                                Number(event.created_date) * 1000
+                              ).toISOString()
+                            )}
                           </span>
                         </TooltipTrigger>
                         <TooltipContent
@@ -335,18 +341,17 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                           sideOffset={5}
                         >
                           <p className="text-sm font-medium text-popover-foreground">
-                            {new Date(event.created_date).toLocaleDateString(
-                              "en-US",
-                              {
-                                weekday: "long",
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                              }
-                            )}
+                            {new Date(
+                              Number(event.created_date) * 1000
+                            ).toLocaleDateString("en-US", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            })}
                           </p>
                         </TooltipContent>
                       </Tooltip>
