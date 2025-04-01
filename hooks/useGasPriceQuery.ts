@@ -5,42 +5,46 @@ import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 interface GasPriceData {
   gasPrices: {
-    currentGasPrice: number;
-    timestamp: string;
+    currentGasPrice: number; // Gas price in Gwei
   };
+  timestamp: string; // ISO timestamp string
   isDefault: boolean;
 }
 
-// Modify the hook to return default values
 export function useGasPriceQuery() {
-  // Return default gas price data
-  return {
-    data: {
-      gasPrices: {
-        currentGasPrice: 50, // Default gas price in gwei
-        timestamp: new Date().toISOString(),
-      },
-      isDefault: true,
+  return useQuery<GasPriceData, Error>({
+    queryKey: ["gasPrice"],
+    queryFn: async () => {
+      const data = await fetchWithRetry<GasPriceData>("/api/market/gas-price");
+
+      if (!data) {
+        throw new Error("Failed to fetch gas price after retries");
+      }
+      if ("error" in data && (data as any).error) {
+        throw new Error((data as any).error as string);
+      }
+
+      return data;
     },
-    isLoading: false,
-    isError: false,
-  };
-  
-  /* Original implementation commented out
-  const { data, error } = useSWR<GasPriceData>(
-    "/api/market/gas",
-    fetcher,
-    {
-      refreshInterval: 120000, // 2 minutes
-      revalidateOnFocus: false,
-      dedupingInterval: 60000, // 1 minute
-    }
-  );
+    refetchInterval: 60 * 1000, // Refetch every 1 minute
+    staleTime: 30 * 1000, // Data considered stale after 30 seconds
+  });
+}
+
+// New Helper hook to get the formatted gas price
+export function useFormattedGasPrice() {
+  const { data, isLoading, error } = useGasPriceQuery();
+
+  const rawGweiPrice = data?.gasPrices?.currentGasPrice ?? 0;
+  const roundedGweiPrice = parseFloat(rawGweiPrice.toFixed(1));
+  const isDefault = data?.isDefault || false;
 
   return {
-    data,
-    isLoading: !error && !data,
-    isError: error,
+    rawGwei: rawGweiPrice,
+    roundedGwei: roundedGweiPrice,
+    isLoading,
+    error,
+    isDefault,
+    timestamp: data?.timestamp ? new Date(data.timestamp) : null,
   };
-  */
 }
