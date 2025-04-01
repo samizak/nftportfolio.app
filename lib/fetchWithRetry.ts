@@ -1,11 +1,22 @@
-export async function fetchWithRetry(
+// Update the base URL for API requests
+const API_BASE_URL = "http://localhost:3001";
+
+export async function fetchWithRetry<T = any>(
   url: string,
-  options: RequestInit = {},
+  options?: RequestInit,
   retries = 3,
-  delay = 1000
-): Promise<Response | null> {
+  backoff = 300
+): Promise<T | null> {
+  // Prepend API base URL if the URL is a relative path and doesn't already include the base URL
+  const apiUrl =
+    url.startsWith("/") && !url.startsWith(API_BASE_URL)
+      ? `${API_BASE_URL}${url}`
+      : url;
+
+  // console.log(apiUrl);
+
   try {
-    const response = await fetch(url, options);
+    const response = await fetch(apiUrl, options);
 
     if (response.status === 400) {
       // Log the error but don't throw - this helps with debugging
@@ -24,12 +35,18 @@ export async function fetchWithRetry(
       }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response;
+
+    const clonedResponse = response.clone();
+    const responseData = await clonedResponse.json().catch((err) => {
+      console.warn("Could not parse response as JSON:", err);
+      return null;
+    });
+
+    return responseData as T;
   } catch (error) {
     if (retries > 0) {
-      // console.log(`Retrying ${url} (${retries} attempts left)...`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      return fetchWithRetry(url, options, retries - 1, delay * 1.5);
+      await new Promise((resolve) => setTimeout(resolve, backoff));
+      return fetchWithRetry<T>(apiUrl, options, retries - 1, backoff * 1.5);
     }
     throw error;
   }

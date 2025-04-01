@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useUser } from "@/context/UserContext";
 import { useAddressResolver, useUserProfileQuery } from "./useUserQuery";
 
@@ -28,36 +29,45 @@ export function useUserData(inputAddress: string | null): UserDataResult {
   } = useAddressResolver(inputAddress);
 
   const {
-    ensData,
     userData,
-    isLoading,
+    isLoading: isProfileLoading,
     error: profileError,
   } = useUserProfileQuery(ethAddress || null);
 
-  if (resolverError) {
-    setError(resolverError);
-  } else if (profileError instanceof Error) {
-    setError(profileError.message);
-  }
+  useEffect(() => {
+    if (resolverError) {
+      setError(resolverError);
+    }
+  }, [resolverError, setError]);
+
+  useEffect(() => {
+    if (profileError instanceof Error) {
+      setError(profileError.message);
+    }
+  }, [profileError, setError]);
 
   const user =
-    userData && ethAddress
+    userData && ethAddress && isValidAddress
       ? {
           name: userData.username || formatAddress(ethAddress),
-          ethHandle: ensData?.ens || "",
+          ethHandle: isEnsName && inputAddress ? inputAddress : "",
           ethAddress: ethAddress,
           avatar: userData.profile_image_url || "",
           banner: userData.banner_image_url || "",
         }
       : null;
 
+  const finalError =
+    resolverError ||
+    (profileError instanceof Error ? profileError.message : null);
+
+  const isLoading = isResolving || isProfileLoading;
+
   return {
     user,
     isLoading,
     isResolvingAddress: isResolving,
-    error:
-      resolverError ||
-      (profileError instanceof Error ? profileError.message : null),
+    error: finalError,
   };
 }
 

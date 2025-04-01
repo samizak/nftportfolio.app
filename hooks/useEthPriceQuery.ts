@@ -23,13 +23,26 @@ export function useEthPriceQuery() {
         throw new Error("Failed to fetch ETH price");
       }
 
-      const data = await response.json();
+      // Check if response is already a JSON object
+      if (typeof response === "object" && !("json" in response)) {
+        // Response is already a JSON object
+        const data = response as unknown as EthPriceData;
 
-      if (data.error) {
-        throw new Error(data.error);
+        if ("error" in data) {
+          throw new Error(data.error as string);
+        }
+
+        return data;
+      } else {
+        // Response is a Response object, parse it
+        const data = await response.json();
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        return data;
       }
-
-      return data;
     },
     refetchInterval: 60 * 1000, // Refetch every minute
     staleTime: 30 * 1000, // Consider data stale after 30 seconds
@@ -44,7 +57,6 @@ export function useFormattedEthPrice() {
   const currencyCode = selectedCurrency.code.toLowerCase();
   const price = data?.ethPrice?.[currencyCode] || 0;
   const isDefault = data?.isDefault || false;
-
   return {
     price,
     formattedPrice: `${selectedCurrency.symbol}${price.toLocaleString()}`,

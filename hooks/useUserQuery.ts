@@ -9,21 +9,21 @@ import { useState } from "react";
 // Function to resolve an ENS name to an address
 async function resolveEnsName(name: string): Promise<string | null> {
   try {
-    const resolveResponse = await fetchWithRetry(
-      `/api/user/ens/resolve?id=${name}`
-    );
+    const resolveData = await fetchWithRetry(`/api/ens/resolve?name=${name}`);
 
-    if (!resolveResponse?.ok) {
-      throw new Error("Failed to resolve ENS name");
+    // console.log("ENS resolve data:", resolveData);
+
+    // Since fetchWithRetry now returns the parsed JSON directly
+    // we need to check if we have valid data instead of checking response.ok
+    if (!resolveData || resolveData.error) {
+      throw new Error(resolveData?.error || "Failed to resolve ENS name");
     }
 
-    const resolveJson = await resolveResponse.json();
-
-    if (!resolveJson.address) {
+    if (!resolveData.address) {
       throw new Error("No address found for this ENS name");
     }
 
-    return resolveJson.address;
+    return resolveData.address;
   } catch (error) {
     console.error("ENS resolution error:", error);
     throw error;
@@ -33,6 +33,12 @@ async function resolveEnsName(name: string): Promise<string | null> {
 // Function to validate and resolve an address
 export function useAddressResolver(inputAddress: string | null) {
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+
+  // Immediately check if it's a valid ETH address
+  const isDirectEthAddress = inputAddress ? isAddress(inputAddress) : false;
+  const isEnsName = inputAddress
+    ? inputAddress.toLowerCase().endsWith(".eth")
+    : false;
 
   const resolveAddress = async (input: string): Promise<string | null> => {
     if (!input) return null;
@@ -45,6 +51,7 @@ export function useAddressResolver(inputAddress: string | null) {
     }
 
     if (isEthAddress) {
+      console.log({ "useUserQuery.ts": input });
       return input;
     }
 
@@ -61,7 +68,7 @@ export function useAddressResolver(inputAddress: string | null) {
     }
   };
 
-  // Query for resolving the address
+  // Only use the query for ENS names, not for direct ETH addresses
   const addressQuery = useQuery({
     queryKey: ["resolveAddress", inputAddress],
     queryFn: async () => {
@@ -73,15 +80,19 @@ export function useAddressResolver(inputAddress: string | null) {
         throw error;
       }
     },
-    enabled: !!inputAddress,
-    retry: 2, // Limit retries for failed resolutions
+    enabled: !!inputAddress && !isDirectEthAddress, // Skip query for direct ETH addresses
+    retry: 2,
   });
 
+  // For direct ETH addresses, return immediately without waiting for the query
+  const ethAddress = isDirectEthAddress ? inputAddress : addressQuery.data;
+
   return {
-    ethAddress: addressQuery.data,
-    isEnsName: inputAddress?.toLowerCase().endsWith(".eth") || false,
-    isValidAddress: !!addressQuery.data,
-    isResolving: isResolvingAddress || addressQuery.isLoading,
+    ethAddress,
+    isEnsName,
+    isValidAddress: isDirectEthAddress || !!addressQuery.data,
+    isResolving:
+      (!isDirectEthAddress && addressQuery.isLoading) || isResolvingAddress,
     error:
       addressQuery.error instanceof Error ? addressQuery.error.message : null,
     resolveAddress,
@@ -92,39 +103,26 @@ export function useAddressResolver(inputAddress: string | null) {
 export function useUserProfileQuery(address: string | null) {
   const enabled = !!address;
 
-  // ENS data query
-  const ensQuery = useQuery({
-    queryKey: ["ens", address],
-    queryFn: async () => {
-      if (!address) throw new Error("No address provided");
-
-      const response = await fetchWithRetry(`/api/user/ens?id=${address}`);
-      if (!response) throw new Error("Failed to fetch ENS data");
-
-      return response.json() as Promise<EnsData>;
-    },
-    enabled,
-  });
-
   // User profile query
   const profileQuery = useQuery({
     queryKey: ["userProfile", address],
     queryFn: async () => {
       if (!address) throw new Error("No address provided");
 
-      const response = await fetchWithRetry(`/api/user/profile?id=${address}`);
+      // Corrected endpoint: Use address in the path
+      const response = await fetchWithRetry(`/api/user/profile/${address}`);
       if (!response) throw new Error("Failed to fetch user profile");
 
-      return response.json() as Promise<UserProfile>;
+      // Since fetchWithRetry now returns parsed JSON directly
+      return response as UserProfile;
     },
     enabled,
   });
 
   return {
-    ensData: ensQuery.data,
     userData: profileQuery.data,
-    isLoading: ensQuery.isLoading || profileQuery.isLoading,
-    error: ensQuery.error || profileQuery.error,
-    isError: ensQuery.isError || profileQuery.isError,
+    isLoading: profileQuery.isLoading,
+    error: profileQuery.error,
+    isError: profileQuery.isError,
   };
 }

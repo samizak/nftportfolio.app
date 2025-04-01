@@ -4,6 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { isAddress } from "ethers";
 import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
+// Define interface for ENS resolve response
+interface EnsResolveResponse {
+  address: string;
+  ensName?: string;
+  error?: string;
+}
+
 interface EnsQueryResult {
   ethAddress: string | null;
   originalInput: string | null;
@@ -17,13 +24,8 @@ export function useEnsQuery(
   input: string | null,
   onError?: (error: string) => void
 ): EnsQueryResult {
-  const {
-    data,
-    isLoading,
-    error,
-    isError
-  } = useQuery({
-    queryKey: ['ens', input],
+  const { data, isLoading, error, isError } = useQuery({
+    queryKey: ["ens", input],
     queryFn: async (): Promise<{
       ethAddress: string | null;
       isEnsName: boolean;
@@ -33,7 +35,7 @@ export function useEnsQuery(
         return {
           ethAddress: null,
           isEnsName: false,
-          isValidAddress: false
+          isValidAddress: false,
         };
       }
 
@@ -49,34 +51,33 @@ export function useEnsQuery(
         return {
           ethAddress: input,
           isEnsName: false,
-          isValidAddress: true
+          isValidAddress: true,
         };
       } else {
         // ENS name needs resolution
-        const resolveResponse = await fetchWithRetry(
-          `/api/user/ens/resolve?id=${input}`
+        const resolveData = await fetchWithRetry<EnsResolveResponse>(
+          `/api/ens/resolve/${input}`
         );
-
-        if (!resolveResponse?.ok) {
-          throw new Error("Failed to resolve ENS name");
+        
+        // Check for errors in the data
+        if (!resolveData || resolveData.error) {
+          throw new Error(resolveData?.error || "Failed to resolve ENS name");
         }
-
-        const resolveJson = await resolveResponse.json();
-
-        if (!resolveJson.address) {
+        
+        if (!resolveData.address) {
           throw new Error("No address found for this ENS name");
         }
-
+        
         return {
-          ethAddress: resolveJson.address,
+          ethAddress: resolveData.address,
           isEnsName: true,
-          isValidAddress: true
+          isValidAddress: true,
         };
       }
     },
     enabled: !!input,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 2
+    retry: 2,
   });
 
   // Handle error case
@@ -90,6 +91,6 @@ export function useEnsQuery(
     isEnsName: data?.isEnsName || false,
     isValidAddress: data?.isValidAddress || false,
     isResolving: isLoading,
-    error: isError && error instanceof Error ? error.message : null
+    error: isError && error instanceof Error ? error.message : null,
   };
 }
