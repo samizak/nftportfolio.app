@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ActivityEvent } from "@/components/activity/ActivityTable";
 import ActivityView from "@/components/ActivityView";
@@ -8,6 +8,18 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { Loader2 } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 import { usePortfolioData } from "@/hooks/usePortfolioData";
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
+
+interface ActivityApiResponse {
+  events: ActivityEvent[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    // include limit if needed
+  };
+  address?: string; // Optional address field
+}
 
 export function ActivityClientWrapper({
   id,
@@ -20,12 +32,11 @@ export function ActivityClientWrapper({
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [loadingProgress, setLoadingProgress] = useState({
-    message: "Initializing...",
-    percentage: 0,
-    currentPage: 0,
-    totalPages: 0,
-  });
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalEvents, setTotalEvents] = useState<number>(0);
+
+  const itemsPerPage = 25;
 
   const {
     user,
@@ -42,140 +53,71 @@ export function ActivityClientWrapper({
     }
   }, [userError, router]);
 
-  useEffect(() => {
-    let cleanupActivityFetch: (() => void) | undefined;
-    const ethAddress = user?.ethAddress;
+  const fetchActivityPage = useCallback(
+    async (page: number, address: string) => {
+      setLoading(true);
+      setError(null);
+      setEvents([]);
 
-    if (ethAddress) {
-      const performFetch = async () => {
-        cleanupActivityFetch = await fetchActivity(ethAddress);
-      };
-      performFetch();
-    }
+      const relativePath = `/api/event/by-account/${address}?page=${page}&limit=${itemsPerPage}`;
 
-    return () => {
-      cleanupActivityFetch?.();
-    };
-  }, [user?.ethAddress, router]);
+      try {
+        const response = await fetchWithRetry<ActivityApiResponse>(
+          relativePath
+        );
 
-  const fetchActivity = async (address: string) => {
-    setLoading(true);
-    setError(null);
-    setEvents([]);
-    setLoadingProgress({
-      message: "Connecting to data source...",
-      percentage: 0,
-      currentPage: 0,
-      totalPages: 0,
-    });
+        if (response && response.pagination) {
+          // Sort events by created_date (descending - latest first)
+          const sortedEvents = [...response.events].sort(
+            (a, b) => Number(b.created_date) - Number(a.created_date)
+          );
+          setEvents(sortedEvents); // Set the sorted events
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-
-    if (!backendUrl) {
-      console.error("Error: NEXT_PUBLIC_BACKEND_API_URL is not defined.");
-      setError("Application configuration error: Backend URL is missing.");
-      setLoading(false);
-      return () => {}; // Return an empty cleanup function
-    }
-
-    let eventSource: EventSource | null = null;
-    const cleanup = () => {
-      if (eventSource) {
-        eventSource.close();
-        console.log("Closed EventSource for", address);
-        eventSource = null;
-      }
-    };
-
-    try {
-      // Construct the relative path first
-      let relativePath = `/api/event/by-account?address=${address}&maxPages=20`;
-
-      // Conditionally add forceRefresh parameter if true
-      if (forceRefresh) {
-        relativePath += `&forceRefresh=true`;
-      }
-
-      // Construct the full absolute URL
-      const url = `${backendUrl}${relativePath}`;
-
-      console.log("Attempting EventSource connection to:", url);
-      eventSource = new EventSource(url);
-
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (
-            data.type === "progress" ||
-            data.type === "event" ||
-            data.type === "complete"
-          ) {
-            setLoading(false);
-          }
-
-          switch (data.type) {
-            case "progress":
-              setLoadingProgress((prev) => ({
-                message: data.message || prev.message,
-                percentage: data.percentage ?? prev.percentage,
-                currentPage: data.currentPage ?? prev.currentPage,
-                totalPages: data.totalPages ?? prev.totalPages,
-              }));
-              break;
-            case "chunk":
-              if (Array.isArray(data.events)) {
-                setEvents((currentEvents) => [
-                  ...currentEvents,
-                  ...(data.events as ActivityEvent[]),
-                ]);
-              }
-              break;
-            case "complete":
-              console.log("SSE Stream Complete:", data);
-              cleanup();
-              break;
-            case "error":
-              console.error("SSE Error:", data);
-              setError(data.error || "An error occurred while fetching data");
-              setLoading(false);
-              cleanup();
-              break;
-          }
-        } catch (parseError) {
-          console.error("Error parsing SSE message data:", parseError);
-          console.error("Raw SSE event data:", event.data);
-          setError("Error processing data stream.");
-          setLoading(false);
-          cleanup();
+          setCurrentPage(response.pagination.currentPage);
+          setTotalPages(response.pagination.totalPages);
+          setTotalEvents(response.pagination.totalItems);
+        } else {
+          console.warn("API response missing pagination data:", response);
+          setEvents([]);
+          setCurrentPage(1);
+          setTotalPages(1);
+          setTotalEvents(0);
         }
-      };
-
-      eventSource.onerror = (err) => {
-        console.error("EventSource connection error:", err);
-        setError("Connection error. Please try again later.");
+      } catch (err) {
+        console.error("Error fetching activity page:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to load activity data."
+        );
+      } finally {
         setLoading(false);
-        cleanup();
-      };
+      }
+    },
+    [itemsPerPage]
+  );
 
-      eventSource.onopen = () => {
-        console.log(">>> SSE Connection successfully opened (onopen fired).");
-        setError(null);
-      };
-    } catch (err) {
-      console.error("Error setting up EventSource:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load activity data. Please try again later."
-      );
+  useEffect(() => {
+    if (id) {
+      setEvents([]);
+      setCurrentPage(1);
+      setTotalPages(1);
+      setTotalEvents(0);
+      setError(null);
+      fetchActivityPage(1, id);
+    } else {
+      setEvents([]);
+      setCurrentPage(1);
+      setTotalPages(1);
+      setTotalEvents(0);
+      setError("No wallet address provided.");
       setLoading(false);
-      cleanup();
     }
+  }, [id, fetchActivityPage]);
 
-    return cleanup;
+  const handlePageChange = (newPage: number) => {
+    if (newPage > 0 && newPage <= totalPages && newPage !== currentPage) {
+      fetchActivityPage(newPage, id);
+    }
   };
-
-  console.log(">>> events", events);
 
   return (
     <>
@@ -196,7 +138,17 @@ export function ActivityClientWrapper({
           </div>
         </div>
       ) : (
-        <ActivityView user={user} events={events} />
+        <ActivityView
+          user={user}
+          events={events}
+          isLoading={loading}
+          error={error}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalEvents={totalEvents}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+        />
       )}
     </>
   );
