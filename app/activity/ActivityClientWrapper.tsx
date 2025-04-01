@@ -34,13 +34,7 @@ export function ActivityClientWrapper({
     error: userError,
   } = useUserData(id);
 
-  const {
-    collections,
-    fetchingNFTs,
-    fetchProgress,
-    resolvedAddress,
-    isValidAddress,
-  } = usePortfolioData(id);
+  const { fetchingNFTs, fetchProgress } = usePortfolioData(id);
 
   useEffect(() => {
     if (userError && userError.includes("Invalid address")) {
@@ -49,11 +43,20 @@ export function ActivityClientWrapper({
   }, [userError, router]);
 
   useEffect(() => {
-    if (!resolvedAddress || !isValidAddress) {
-      return;
+    let cleanupActivityFetch: (() => void) | undefined;
+    const ethAddress = user?.ethAddress;
+
+    if (ethAddress) {
+      const performFetch = async () => {
+        cleanupActivityFetch = await fetchActivity(ethAddress);
+      };
+      performFetch();
     }
-    fetchActivity(resolvedAddress);
-  }, [resolvedAddress, isValidAddress]);
+
+    return () => {
+      cleanupActivityFetch?.();
+    };
+  }, [user?.ethAddress, router]);
 
   const fetchActivity = async (address: string) => {
     setLoading(true);
@@ -63,58 +66,116 @@ export function ActivityClientWrapper({
       message: "Connecting to data source...",
       percentage: 0,
       currentPage: 0,
-      totalPages: 20,
+      totalPages: 0,
     });
+
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+
+    if (!backendUrl) {
+      console.error("Error: NEXT_PUBLIC_BACKEND_API_URL is not defined.");
+      setError("Application configuration error: Backend URL is missing.");
+      setLoading(false);
+      return () => {}; // Return an empty cleanup function
+    }
+
+    let eventSource: EventSource | null = null;
+    const cleanup = () => {
+      if (eventSource) {
+        eventSource.close();
+        console.log("Closed EventSource for", address);
+        eventSource = null;
+      }
+    };
+
     try {
-      const eventSource = new EventSource(
-        `/api/events/by-account?address=${address}&maxPages=20` +
-          (forceRefresh && `&refresh=true`)
-      );
+      // Construct the relative path first
+      let relativePath = `/api/event/by-account?address=${address}&maxPages=20`;
+
+      // Conditionally add forceRefresh parameter if true
+      if (forceRefresh) {
+        relativePath += `&forceRefresh=true`;
+      }
+
+      // Construct the full absolute URL
+      const url = `${backendUrl}${relativePath}`;
+
+      console.log("Attempting EventSource connection to:", url);
+      eventSource = new EventSource(url);
 
       eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        switch (data.type) {
-          case "progress":
-            setLoadingProgress((prev) => ({
-              message: data.message || prev.message,
-              percentage: data.percentage || prev.percentage,
-              currentPage: data.currentPage || prev.currentPage,
-              totalPages: data.totalPages || prev.totalPages,
-            }));
-            break;
-          case "chunk":
-            setEvents((currentEvents) => [...currentEvents, ...data.events]);
-            break;
-          case "complete":
+        try {
+          const data = JSON.parse(event.data);
+          if (
+            data.type === "progress" ||
+            data.type === "event" ||
+            data.type === "complete"
+          ) {
             setLoading(false);
-            eventSource.close();
-            break;
-          case "error":
-            setError(data.error || "An error occurred while fetching data");
-            setLoading(false);
-            eventSource.close();
-            break;
+          }
+
+          switch (data.type) {
+            case "progress":
+              setLoadingProgress((prev) => ({
+                message: data.message || prev.message,
+                percentage: data.percentage ?? prev.percentage,
+                currentPage: data.currentPage ?? prev.currentPage,
+                totalPages: data.totalPages ?? prev.totalPages,
+              }));
+              break;
+            case "chunk":
+              if (Array.isArray(data.events)) {
+                setEvents((currentEvents) => [
+                  ...currentEvents,
+                  ...(data.events as ActivityEvent[]),
+                ]);
+              }
+              break;
+            case "complete":
+              console.log("SSE Stream Complete:", data);
+              cleanup();
+              break;
+            case "error":
+              console.error("SSE Error:", data);
+              setError(data.error || "An error occurred while fetching data");
+              setLoading(false);
+              cleanup();
+              break;
+          }
+        } catch (parseError) {
+          console.error("Error parsing SSE message data:", parseError);
+          console.error("Raw SSE event data:", event.data);
+          setError("Error processing data stream.");
+          setLoading(false);
+          cleanup();
         }
       };
 
-      eventSource.onerror = () => {
+      eventSource.onerror = (err) => {
+        console.error("EventSource connection error:", err);
         setError("Connection error. Please try again later.");
         setLoading(false);
-        eventSource.close();
+        cleanup();
       };
 
-      return () => {
-        eventSource.close();
+      eventSource.onopen = () => {
+        console.log(">>> SSE Connection successfully opened (onopen fired).");
+        setError(null);
       };
     } catch (err) {
+      console.error("Error setting up EventSource:", err);
       setError(
         err instanceof Error
           ? err.message
           : "Failed to load activity data. Please try again later."
       );
       setLoading(false);
+      cleanup();
     }
+
+    return cleanup;
   };
+
+  console.log(">>> events", events);
 
   return (
     <>

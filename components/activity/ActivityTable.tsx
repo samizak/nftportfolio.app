@@ -242,11 +242,11 @@ export default function ActivityTable({ events }: ActivityTableProps) {
                   </TableCell>
                   <TableCell className="py-5">
                     <p className="font-medium text-base">
-                      {event.payment.quantity
-                        ? `${+event.payment.quantity / 1e18} ${
+                      {event.payment?.quantity
+                        ? `${(+event.payment.quantity / 1e18).toFixed(4)} ${
                             event.payment.symbol
                           }`
-                        : ""}
+                        : "---"}
                     </p>
                   </TableCell>
                   <TableCell className="py-5 font-medium text-base">
