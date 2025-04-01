@@ -11,10 +11,10 @@ import {
 import { GasPrice } from "../footer/GasPrice";
 import { EthPrice } from "../footer/EthPrice";
 import { useFormattedEthPrice } from "@/hooks/useEthPriceQuery";
-import { useGasPriceQuery } from "@/hooks/useGasPriceQuery";
+import { useFormattedGasPrice } from "@/hooks/useGasPriceQuery";
 
 export default function Footer() {
-  const { lastUpdated: lastUpdatedGas } = useGasPriceQuery();
+  const { timestamp: lastUpdatedGas } = useFormattedGasPrice();
   const { lastUpdated: lastUpdatedPrice } = useFormattedEthPrice();
 
   return (
