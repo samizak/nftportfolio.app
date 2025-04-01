@@ -13,50 +13,34 @@ interface EthPriceData {
 }
 
 export function useEthPriceQuery() {
-  const { selectedCurrency } = useCurrency();
-
   return useQuery<EthPriceData, Error>({
-    queryKey: ["ethPrice", selectedCurrency.code],
+    queryKey: ["ethPrice"],
     queryFn: async () => {
-      const response = await fetchWithRetry("/api/market/ethereum-prices");
-      if (!response) {
-        throw new Error("Failed to fetch ETH price");
+      const data = await fetchWithRetry<EthPriceData>(
+        "/api/market/ethereum-prices"
+      );
+      if (!data) {
+        throw new Error("Failed to fetch ETH price after retries");
       }
-
-      // Check if response is already a JSON object
-      if (typeof response === "object" && !("json" in response)) {
-        // Response is already a JSON object
-        const data = response as unknown as EthPriceData;
-
-        if ("error" in data) {
-          throw new Error(data.error as string);
-        }
-
-        return data;
-      } else {
-        // Response is a Response object, parse it
-        const data = await response.json();
-
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        return data;
+      if ("error" in data && data.error) {
+        throw new Error(data.error as string);
       }
+      return data;
     },
-    refetchInterval: 60 * 1000, // Refetch every minute
-    staleTime: 30 * 1000, // Consider data stale after 30 seconds
+    refetchInterval: 60 * 1000,
+    staleTime: 30 * 1000,
   });
 }
 
-// Helper hook to get the formatted price in the selected currency
 export function useFormattedEthPrice() {
   const { data, isLoading, error } = useEthPriceQuery();
+
   const { selectedCurrency } = useCurrency();
 
   const currencyCode = selectedCurrency.code.toLowerCase();
   const price = data?.ethPrice?.[currencyCode] || 0;
   const isDefault = data?.isDefault || false;
+
   return {
     price,
     formattedPrice: `${selectedCurrency.symbol}${price.toLocaleString()}`,
