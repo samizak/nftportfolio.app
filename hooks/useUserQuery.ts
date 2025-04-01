@@ -9,7 +9,7 @@ import { useState } from "react";
 // Function to resolve an ENS name to an address
 async function resolveEnsName(name: string): Promise<string | null> {
   try {
-    const resolveData = await fetchWithRetry(`/api/ens/resolve?name=${name}`);
+    const resolveData = await fetchWithRetry(`/api/ens/resolve/${name}`);
 
     // console.log("ENS resolve data:", resolveData);
 
