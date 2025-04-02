@@ -105,7 +105,7 @@ export default function PortfolioStats({
               </div>
               <div className="flex flex-col items-start min-w-0">
                 <a
-                  href={`https://opensea.io/collection/${topCollection.collectionSlug}`}
+                  href={`https://opensea.io/collection/${topCollection.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xl font-bold hover:text-primary transition-colors break-words"
