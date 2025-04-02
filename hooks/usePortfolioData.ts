@@ -40,6 +40,16 @@ interface SummaryApiResponse {
   status: "ready" | "calculating" | "error";
   data: PortfolioSummaryData | null;
   message?: string;
+  progress?: PortfolioProgress | null; // Add optional progress field
+}
+
+// Define the structure for the progress object
+interface PortfolioProgress {
+  step: string;
+  nftCount?: number;
+  collectionCount?: number;
+  processedCollections?: number;
+  // Add other potential progress fields if needed
 }
 
 // For internal state tracking of the summary process
@@ -61,6 +71,8 @@ export function usePortfolioData(id: string | null) {
     null
   );
   const [summaryStatus, setSummaryStatus] = useState<SummaryStatus>("idle");
+  const [summaryProgress, setSummaryProgress] =
+    useState<PortfolioProgress | null>(null); // State for progress
   const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false); // Tracks initial load and polling
 
   // Individual NFT List State
@@ -135,11 +147,13 @@ export function usePortfolioData(id: string | null) {
         if (result.status === "ready" && result.data) {
           setSummaryData(result.data);
           setSummaryStatus("ready");
+          setSummaryProgress(null); // Reset progress
           setIsLoadingSummary(false);
           clearPolling();
           console.log("Portfolio summary loaded.", result.data);
         } else if (result.status === "calculating") {
           setSummaryStatus("polling");
+          setSummaryProgress(result.progress || null); // Set progress state
           setIsLoadingSummary(true); // Keep loading true while polling
           // Schedule next poll
           clearPolling(); // Clear previous timeout just in case
@@ -158,6 +172,7 @@ export function usePortfolioData(id: string | null) {
           console.error("Error from summary API:", errorMsg, result);
           setHookError(errorMsg);
           setSummaryStatus("error");
+          setSummaryProgress(null); // Reset progress on error
           setIsLoadingSummary(false);
           clearPolling();
         }
@@ -169,6 +184,7 @@ export function usePortfolioData(id: string | null) {
             : "An unknown error occurred fetching summary";
         setHookError(errorMsg);
         setSummaryStatus("error");
+        setSummaryProgress(null); // Reset progress on fetch error
         setIsLoadingSummary(false);
         clearPolling();
       }
@@ -310,26 +326,28 @@ export function usePortfolioData(id: string | null) {
     clearPolling,
   ]);
 
-  // --- Return Values --- //
+  // --- Return Value --- //
   return {
-    // Address Info
-    ethAddress,
-    isValidAddress,
-    isResolvingAddress,
-
-    // Summary Data & State (Primary return values for this view)
+    // Summary Data & Status
     summaryData,
     summaryStatus,
+    summaryProgress, // Include progress here
+    // Individual NFT Data & Status
+    individualNfts,
+    hasMoreIndividualNfts,
+    // Combined Loading State
+    isLoading: isLoadingSummary || isLoadingInitialNfts || isResolvingAddress, // Added isResolvingAddress
+    // Specific Loading States
     isLoadingSummary,
-
-    // Individual NFT List & State (Keep logic internally, but don't return for main view)
-    // individualNfts,
-    // isLoadingInitialNfts,
-    // hasMoreIndividualNfts,
-    // loadMoreIndividualNfts,
-    // isLoadingMoreNfts,
-
-    // General Error State
-    error: hookError,
+    isLoadingInitialNfts,
+    isLoadingMoreNfts,
+    isResolvingAddress, // Keep this as well
+    // Combined Error State
+    error: hookError || resolverError,
+    // Functions
+    fetchPortfolioSummary: () => {
+      if (ethAddress) fetchPortfolioSummary(ethAddress);
+    },
+    loadMoreIndividualNfts,
   };
 }

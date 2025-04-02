@@ -26,6 +26,7 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
   const {
     summaryData,
     summaryStatus,
+    summaryProgress,
     isLoadingSummary,
     error: portfolioError,
   } = usePortfolioData(id);
@@ -116,7 +117,20 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
   return (
     <>
       {/* Main Loading Screen (for summary/resolution) */}
-      {showMainLoadingScreen && <LoadingScreen status={loadingStatusMessage} />}
+      {showMainLoadingScreen && (
+        <LoadingScreen
+          status={loadingStatusMessage}
+          progress={
+            summaryProgress
+              ? {
+                  step: summaryProgress.step,
+                  processedItems: summaryProgress.processedCollections,
+                  totalItems: summaryProgress.collectionCount,
+                }
+              : null
+          }
+        />
+      )}
 
       {/* User Profile Loading Spinner (if needed and main loading isn't active) */}
       {showUserSpinner && (
