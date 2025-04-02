@@ -94,7 +94,7 @@ export default function Header({ user, activePage }: HeaderProps) {
               type="submit"
               variant="ghost"
               size="icon"
-              className="flex-shrink-0 h-9 w-9"
+              className="flex-shrink-0 h-9 w-9 cursor-pointer"
               aria-label="Submit search"
             >
               <Search className="h-4 w-4" />

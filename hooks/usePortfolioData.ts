@@ -22,6 +22,7 @@ export interface CollectionBreakdown {
   totalValueUsd: number;
   imageUrl?: string;
   floorPriceEth?: number; // Make optional as it might be missing/null
+  safelistStatus?: string; // Add safelistStatus field
 }
 
 export interface PortfolioSummaryData {

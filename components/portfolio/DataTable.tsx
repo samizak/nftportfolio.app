@@ -9,8 +9,14 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import Image from "next/image";
-import { Loader2, PackageX } from "lucide-react";
+import { Loader2, PackageX, BadgeCheck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { CollectionBreakdown } from "@/hooks/usePortfolioData";
@@ -151,6 +157,7 @@ export function DataTable({
     return sortConfig.direction === "ascending" ? " \u2191" : " \u2193";
   };
 
+  console.log(data);
   return (
     <div className="rounded-md border">
       <Table>
@@ -234,15 +241,35 @@ export function DataTable({
                     <div className="h-10 w-10 flex-shrink-0 rounded-md bg-gray-200 dark:bg-gray-800 transition-all duration-200 group-hover:shadow-md group-hover:scale-105"></div>
                   )}
                   <div className="flex flex-col min-w-0">
-                    <a
-                      href={`https://opensea.io/collection/${collection.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-base hover:text-blue-600 transition-colors inline-block break-words"
-                      title={collection.name}
-                    >
-                      {collection.name}
-                    </a>
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={`https://opensea.io/collection/${collection.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-base hover:text-blue-600 transition-colors inline-block break-words truncate max-w-[calc(100%-20px)]"
+                        title={collection.name}
+                      >
+                        {collection.name}
+                      </a>
+                      {collection.safelistStatus === "verified" && (
+                        <TooltipProvider delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <BadgeCheck className="h-6 w-6 text-blue-500 flex-shrink-0 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent
+                              sideOffset={4}
+                              className="bg-popover/95 px-4 py-3 text-xs rounded-md shadow-sm"
+                            >
+                              <div className="flex items-center gap-1.5 text-popover-foreground">
+                                <BadgeCheck className="h-3.5 w-3.5" />
+                                <span>Verified Collection</span>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
                     <span
                       className="text-xs text-muted-foreground truncate"
                       title={collection.slug}
