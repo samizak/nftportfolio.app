@@ -63,47 +63,8 @@ export function DataTable({
     direction: "descending",
   });
 
-  if (isLoading) {
-    return (
-      <div className="rounded-md border flex items-center justify-center min-h-[190px] p-8 text-center">
-        <div className="space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-muted-foreground">Loading collections...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data || !Array.isArray(data)) {
-    console.error("DataTable received invalid data:", data);
-    return (
-      <div className="rounded-md border p-8 text-center text-destructive">
-        Invalid data received.
-      </div>
-    );
-  }
-
-  if (data.length === 0) {
-    return (
-      <div className="rounded-md border flex flex-col items-center justify-center min-h-[190px] p-8 text-center">
-        <div className="space-y-4">
-          <div className="rounded-full bg-muted/50 p-3 w-fit mx-auto">
-            <PackageX className="w-8 h-8 text-muted-foreground" />
-          </div>
-          <div className="space-y-2">
-            <p className="text-xl font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              No Collections Found
-            </p>
-            <p className="text-sm text-muted-foreground">
-              This portfolio doesn't seem to hold NFTs in any collections.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const sortedData = useMemo(() => {
+    if (!data) return [];
     return [...data].sort((a, b) => {
       if (!a || !b) return 0;
 
@@ -150,6 +111,46 @@ export function DataTable({
       }
     });
   }, [data, sortConfig, totalValue]);
+
+  if (isLoading) {
+    return (
+      <div className="rounded-md border flex items-center justify-center min-h-[190px] p-8 text-center">
+        <div className="space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-muted-foreground">Loading collections...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data || !Array.isArray(data)) {
+    console.error("DataTable received invalid data:", data);
+    return (
+      <div className="rounded-md border p-8 text-center text-destructive">
+        Invalid data received.
+      </div>
+    );
+  }
+
+  if (data.length === 0) {
+    return (
+      <div className="rounded-md border flex flex-col items-center justify-center min-h-[190px] p-8 text-center">
+        <div className="space-y-4">
+          <div className="rounded-full bg-muted/50 p-3 w-fit mx-auto">
+            <PackageX className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-xl font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              No Collections Found
+            </p>
+            <p className="text-sm text-muted-foreground">
+              This portfolio doesn't seem to hold NFTs in any collections.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const requestSort = (key: CollectionSortKey) => {
     let direction: "ascending" | "descending" = "ascending";
