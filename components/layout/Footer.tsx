@@ -80,7 +80,7 @@ export default function Footer() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 border-b pb-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Image
                       src="/opensea_logo.svg"
@@ -97,7 +97,7 @@ export default function Footer() {
                 </div>
 
                 {/* Add NFTGO entry */}
-                <div className="space-y-2 border-b pb-2">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Image
                       src="/nftgo_logo.svg"
