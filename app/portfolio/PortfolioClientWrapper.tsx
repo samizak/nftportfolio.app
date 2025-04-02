@@ -8,6 +8,7 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUserData } from "@/hooks/useUserData";
 import { usePortfolioData } from "@/hooks/usePortfolioData";
+import { useFormattedEthPrice } from "@/hooks/useEthPriceQuery";
 
 export function PortfolioClientWrapper({ id }: { id: string | null }) {
   const router = useRouter();
@@ -23,28 +24,46 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
 
   const {
     collections,
-    ethPrice,
     totalNfts,
     totalValue,
-    fetchingNFTs,
+    isLoadingInitial: isPortfolioLoadingInitial,
+    isLoadingMore: isPortfolioLoadingMore,
+    isProcessingPrices,
+    hasMoreNfts,
+    loadMoreNfts,
     fetchProgress,
+    error: portfolioError,
   } = usePortfolioData(id);
 
-  if (userError) {
+  // Fetch formatted ETH price using the dedicated hook
+  const {
+    price: ethPrice,
+    isLoading: isEthPriceLoading,
+    error: ethPriceError,
+  } = useFormattedEthPrice();
+
+  // Combine error states
+  const combinedError =
+    userError ||
+    portfolioError ||
+    (ethPriceError ? ethPriceError.message : null);
+
+  if (combinedError) {
+    const errorMessage = combinedError;
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-background to-background/50">
         <div className="relative backdrop-blur-sm bg-card/30 border border-border/50 rounded-xl p-8 max-w-md w-full shadow-lg">
           <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-xl" />
           <div className="relative">
             <h2 className="text-2xl font-bold text-foreground mb-3">
-              {userError.includes("404")
+              {errorMessage?.includes("404")
                 ? "Portfolio Not Found"
                 : "Something went wrong"}
             </h2>
             <p className="text-muted-foreground mb-6">
-              {userError.includes("404")
+              {errorMessage?.includes("404")
                 ? "We couldn't find any NFTs for this address. The address might be incorrect or doesn't own any NFTs."
-                : userError}
+                : errorMessage || "An unexpected error occurred."}
             </p>
             <div className="flex gap-3">
               <Button
@@ -70,9 +89,14 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
     );
   }
 
+  // Combine loading states for the main loading screen
+  const showLoadingScreen = isPortfolioLoadingInitial || isResolvingAddress;
+  // Use user loading state for the profile spinner
+  const showUserSpinner = isUserLoading;
+
   return (
     <>
-      {(fetchingNFTs || isResolvingAddress) && (
+      {showLoadingScreen && (
         <LoadingScreen
           status={
             isResolvingAddress ? "Resolving ENS name..." : fetchProgress.status
@@ -82,7 +106,7 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
         />
       )}
 
-      {isUserLoading ? (
+      {showUserSpinner ? (
         <div className="fixed inset-0 flex items-center justify-center">
           <div className="flex flex-col items-center space-y-3">
             <Loader2 className="h-8 w-8 animate-spin" />
@@ -90,7 +114,8 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
           </div>
         </div>
       ) : (
-        user && (
+        user &&
+        !showLoadingScreen && (
           <PortfolioView
             user={user}
             data={collections}
@@ -98,6 +123,10 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
             totalNfts={totalNfts}
             totalValue={totalValue}
             selectedCurrency={selectedCurrency}
+            isLoadingMoreNfts={isPortfolioLoadingMore}
+            isProcessingPrices={isProcessingPrices}
+            hasMoreNfts={hasMoreNfts}
+            loadMoreNfts={loadMoreNfts}
           />
         )
       )}

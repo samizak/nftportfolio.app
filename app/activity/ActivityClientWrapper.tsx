@@ -52,7 +52,7 @@ export function ActivityClientWrapper({
     error: userDataError,
   } = useUserData(ethAddress);
 
-  const { fetchingNFTs, fetchProgress } = usePortfolioData(id);
+  const { fetchProgress } = usePortfolioData(id);
 
   useEffect(() => {
     if (userDataError && userDataError.includes("Invalid address")) {
@@ -181,15 +181,6 @@ export function ActivityClientWrapper({
 
   return (
     <>
-      {(fetchingNFTs || isResolvingAddress) && (
-        <LoadingScreen
-          status={
-            isResolvingAddress ? "Resolving ENS name..." : fetchProgress.status
-          }
-          count={fetchProgress.count}
-          startTime={fetchProgress.startTime}
-        />
-      )}
       <ActivityView
         user={user}
         events={events}

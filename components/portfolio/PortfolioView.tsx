@@ -8,45 +8,53 @@ import { useState, useEffect } from "react";
 import TableFilters from "@/components/TableFilters";
 import { DataTable } from "@/components/portfolio/DataTable";
 import { containerClass } from "@/lib/utils";
-import { PortfolioViewProps } from "@/types/portfolio";
 import Footer from "@/components/layout/Footer";
 import Header from "@/components/layout/Header";
+import { Currency } from "@/context/CurrencyContext";
+import { CollectionData } from "@/types/nft";
+
+interface PortfolioViewProps {
+  user: any;
+  data: CollectionData[];
+  ethPrice?: number;
+  totalNfts: number;
+  totalValue: number;
+  selectedCurrency: Currency;
+  isLoadingMoreNfts: boolean;
+  isProcessingPrices: boolean;
+  hasMoreNfts: boolean;
+  loadMoreNfts: () => void;
+}
 
 export default function PortfolioView({
   user,
-  data = [],
-  ethPrice = 0,
-  totalNfts = 0,
-  totalValue = 0,
-  selectedCurrency = { code: "USD", symbol: "$" },
+  data,
+  ethPrice,
+  totalNfts,
+  totalValue,
+  selectedCurrency,
+  isLoadingMoreNfts,
+  isProcessingPrices,
+  hasMoreNfts,
+  loadMoreNfts,
 }: PortfolioViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredData, setFilteredData] = useState(data);
+  const [filteredData, setFilteredData] = useState<CollectionData[]>(data);
 
-  // Update filteredData when data changes
+  const priceForComponents = ethPrice || 0;
+
   useEffect(() => {
-    setFilteredData(applySearchAndFilters(searchQuery, data));
-  }, [data, searchQuery]); // Added searchQuery as dependency
+    if (searchQuery === "") {
+      setFilteredData(data);
+    } else {
+      setFilteredData(
+        data.filter((item) =>
+          item.name?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      );
+    }
+  }, [searchQuery, data]);
 
-  // Apply both search and filters
-  const applySearchAndFilters = (
-    searchTerm: string,
-    dataToFilter: any[] = data
-  ) => {
-    if (!searchTerm) return dataToFilter;
-    return dataToFilter.filter(
-      (item) =>
-        item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.collection?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  };
-  // Handle search input changes
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    setFilteredData(applySearchAndFilters(query));
-  };
-  // Handle filter application
   const handleApplyFilters = (field: string, min: string, max: string) => {
     const minValue = min === "" ? -Infinity : parseFloat(min);
     const maxValue = max === "" ? Infinity : parseFloat(max);
@@ -70,11 +78,13 @@ export default function PortfolioView({
       }
       return value >= minValue && value <= maxValue;
     });
-    setFilteredData(applySearchAndFilters(searchQuery, filtered));
+    setFilteredData(
+      data.filter((item) => filtered.some((f) => f.name === item.name))
+    );
   };
-  // Add the missing handleClearFilters function
+
   const handleClearFilters = () => {
-    setFilteredData(applySearchAndFilters(searchQuery));
+    setFilteredData(data);
   };
 
   const [timeframe, setTimeframe] = useState("all");
@@ -89,14 +99,13 @@ export default function PortfolioView({
 
         <PortfolioStats
           data={data}
-          ethPrice={ethPrice}
+          ethPrice={priceForComponents}
           totalNfts={totalNfts}
           totalValue={totalValue}
           selectedCurrency={selectedCurrency}
         />
 
         <div className="mt-8 grid grid-cols-1 md:grid-cols-[300px_1fr] gap-6">
-          {/* Filters column - fixed width */}
           <div>
             <TableFilters
               onApplyFilters={handleApplyFilters}
@@ -104,7 +113,6 @@ export default function PortfolioView({
             />
           </div>
 
-          {/* Main content column - auto width */}
           <div>
             <Card className="h-full">
               <CardHeader className="flex flex-row items-center justify-between">
@@ -119,7 +127,16 @@ export default function PortfolioView({
                   <Input
                     placeholder="Search NFTs..."
                     value={searchQuery}
-                    onChange={handleSearchChange}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setFilteredData(
+                        data.filter((item) =>
+                          item.name
+                            ?.toLowerCase()
+                            .includes(e.target.value.toLowerCase())
+                        )
+                      );
+                    }}
                   />
                 </div>
               </CardHeader>
@@ -136,9 +153,13 @@ export default function PortfolioView({
                 ) : (
                   <DataTable
                     data={filteredData}
-                    ethPrice={ethPrice}
+                    ethPrice={priceForComponents}
                     totalValue={totalValue}
                     selectedCurrency={selectedCurrency}
+                    isLoadingMoreNfts={isLoadingMoreNfts}
+                    isProcessingPrices={isProcessingPrices}
+                    hasMoreNfts={hasMoreNfts}
+                    loadMoreNfts={loadMoreNfts}
                   />
                 )}
               </CardContent>

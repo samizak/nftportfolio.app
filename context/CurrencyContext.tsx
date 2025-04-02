@@ -2,10 +2,10 @@
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
-type Currency = {
+export interface Currency {
   code: string;
   symbol: string;
-};
+}
 
 interface CurrencyContextType {
   selectedCurrency: Currency;
@@ -17,10 +17,13 @@ const defaultCurrency = {
   symbol: "$",
 };
 
-const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
+const CurrencyContext = createContext<CurrencyContextType | undefined>(
+  undefined
+);
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
-  const [selectedCurrency, setSelectedCurrency] = useState<Currency>(defaultCurrency);
+  const [selectedCurrency, setSelectedCurrency] =
+    useState<Currency>(defaultCurrency);
 
   return (
     <CurrencyContext.Provider value={{ selectedCurrency, setSelectedCurrency }}>
