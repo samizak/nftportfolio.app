@@ -30,6 +30,9 @@ import {
   CircleDashed,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { format, parseISO } from "date-fns";
+import { formatAddress } from "@/lib/activityUtils";
+import { formatCurrency } from "@/lib/utils";
 
 export interface ActivityEvent {
   id: string;
@@ -358,37 +361,47 @@ export default function ActivityTable({
                         )}
                       </TableCell>
                       <TableCell className="text-right text-base text-muted-foreground py-4 pr-6">
-                        <TooltipProvider>
-                          <Tooltip delayDuration={200}>
-                            <TooltipTrigger asChild>
-                              <span className="cursor-pointer hover:text-foreground transition-colors duration-200">
-                                {formatEventDate(
-                                  new Date(
-                                    Number(event.created_date) * 1000
-                                  ).toISOString()
-                                )}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent
-                              className="bg-popover/95 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm border border-border/50"
-                              sideOffset={5}
-                            >
-                              <p className="text-sm font-medium text-popover-foreground">
-                                {new Date(
-                                  Number(event.created_date) * 1000
-                                ).toLocaleDateString("en-US", {
-                                  weekday: "long",
-                                  year: "numeric",
-                                  month: "long",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  second: "2-digit",
-                                })}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        {(() => {
+                          const dateObj = new Date(
+                            Number(event.created_date) * 1000
+                          );
+                          const isValidDate = !isNaN(dateObj.getTime());
+
+                          console.log(
+                            event.created_date,
+                            Number(event.created_date) * 1000 * 1000,
+                            dateObj
+                          );
+
+                          if (!isValidDate) {
+                            return <span>Invalid Date</span>;
+                          }
+
+                          const tooltipDate = format(dateObj, "PPPPpp");
+                          const relativeDate = formatEventDate(
+                            dateObj.toISOString()
+                          );
+
+                          return (
+                            <TooltipProvider>
+                              <Tooltip delayDuration={200}>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-pointer hover:text-foreground transition-colors duration-200">
+                                    {relativeDate}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  className="bg-popover/95 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm border border-border/50"
+                                  sideOffset={5}
+                                >
+                                  <p className="text-sm font-medium text-popover-foreground">
+                                    {tooltipDate}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()}
                       </TableCell>
                     </TableRow>
                   ))}

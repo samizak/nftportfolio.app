@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ActivityEvent } from "@/components/activity/ActivityTable";
 import ActivityView from "@/components/ActivityView";
@@ -9,27 +9,40 @@ import { useUserData } from "@/hooks/useUserData";
 import { fetchWithRetry } from "@/lib/fetchWithRetry";
 import { useAddressResolver } from "@/hooks/useUserQuery";
 
+interface BasePagination {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  limit: number;
+}
+
 interface ActivityApiResponse {
   events: ActivityEvent[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalItems: number;
-    // include limit if needed
-  };
-  address?: string; // Optional address field
+  pagination: BasePagination;
+  address?: string;
 }
+
+interface SyncStatusResponse {
+  address: string;
+  status: "syncing" | "idle";
+}
+
+const POLLING_INTERVAL = 7000;
 
 export function ActivityClientWrapper({ id }: { id: string }) {
   const router = useRouter();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
-  const [activityLoading, setActivityLoading] = useState<boolean>(false);
-  const [activityError, setActivityError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [totalEvents, setTotalEvents] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState<BasePagination>({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    limit: 25,
+  });
 
-  const itemsPerPage = 25;
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     ethAddress,
@@ -44,98 +57,270 @@ export function ActivityClientWrapper({ id }: { id: string }) {
     error: userDataError,
   } = useUserData(ethAddress);
 
-  useEffect(() => {
-    if (userDataError && userDataError.includes("Invalid address")) {
-      router.push("/");
-    }
-  }, [userDataError, router]);
-
-  const fetchActivityPage = useCallback(
-    async (page: number, address: string) => {
-      setActivityLoading(true);
-      setActivityError(null);
-      setEvents([]);
-
-      const relativePath = `/api/event/by-account/${address}?page=${page}&limit=${itemsPerPage}`;
-
+  const fetchEvents = useCallback(
+    async (page: number, address: string, limit: number) => {
+      const relativePath = `/api/event/${address}?page=${page}&limit=${limit}`;
       try {
         const response = await fetchWithRetry<ActivityApiResponse>(
           relativePath
         );
-
         if (response && response.pagination) {
-          // Sort events by created_date (descending - latest first)
           const sortedEvents = [...response.events].sort(
             (a, b) => Number(b.created_date) - Number(a.created_date)
           );
-          setEvents(sortedEvents); // Set the sorted events
-
-          setCurrentPage(response.pagination.currentPage);
-          setTotalPages(response.pagination.totalPages);
-          setTotalEvents(response.pagination.totalItems);
+          return {
+            events: sortedEvents,
+            pagination: { ...response.pagination, limit },
+          };
         } else {
           console.warn("API response missing pagination data:", response);
-          setEvents([]);
-          setCurrentPage(1);
-          setTotalPages(1);
-          setTotalEvents(0);
+          return {
+            events: [],
+            pagination: { currentPage: 1, totalPages: 1, totalItems: 0, limit },
+          };
         }
       } catch (err) {
-        console.error("Error fetching activity page:", err);
-        setActivityError(
-          err instanceof Error ? err.message : "Failed to load activity data."
-        );
-      } finally {
-        setActivityLoading(false);
+        console.error("Error fetching events:", err);
+        throw err instanceof Error
+          ? err
+          : new Error("Failed to load activity data.");
       }
     },
-    [itemsPerPage]
+    []
   );
+
+  const checkSyncStatus = useCallback(async (address: string) => {
+    const relativePath = `/api/event/${address}/sync-status`;
+    try {
+      const response = await fetchWithRetry<SyncStatusResponse>(relativePath);
+      if (response) {
+        return response.status;
+      }
+      console.warn("Sync status check failed after retries, assuming idle.");
+      return "idle";
+    } catch (err) {
+      console.error("Error checking sync status:", err);
+      return "idle";
+    }
+  }, []);
+
+  const triggerSync = useCallback(async (address: string) => {
+    const relativePath = `/api/event/${address}/sync`;
+    try {
+      fetchWithRetry(relativePath, { method: "POST" });
+    } catch (err) {
+      console.error("Error triggering sync:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [ethAddress]);
 
   useEffect(() => {
     if (!isResolvingAddress && isValidAddress && ethAddress) {
-      console.log(
-        `Resolved address ${ethAddress}, fetching activity page 1...`
-      );
+      console.log(`Address ${ethAddress} resolved. Starting initial load.`);
+      setIsLoading(true);
+      setIsSyncing(false);
+      setError(null);
       setEvents([]);
-      setCurrentPage(1);
-      setTotalPages(1);
-      setTotalEvents(0);
-      setActivityError(null);
-      fetchActivityPage(1, ethAddress);
+      setPagination((prev) => ({
+        ...prev,
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+      }));
+
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+
+      const initialLoad = async () => {
+        try {
+          const [initialEventData, initialSyncStatus] = await Promise.all([
+            fetchEvents(1, ethAddress, pagination.limit),
+            checkSyncStatus(ethAddress),
+          ]);
+
+          setEvents(initialEventData.events);
+          setPagination(initialEventData.pagination);
+          console.log(
+            `Initial load complete. Status: ${initialSyncStatus}, Events fetched: ${initialEventData.events.length}`
+          );
+
+          if (initialSyncStatus === "syncing") {
+            console.log("Sync already in progress. Starting polling.");
+            setIsSyncing(true);
+          } else {
+            if (initialEventData.events.length === 0) {
+              console.log(
+                "No initial events found and status is idle. Triggering mandatory sync."
+              );
+              triggerSync(ethAddress);
+              setIsSyncing(true);
+            } else {
+              console.log(
+                "Initial events found and status is idle. Triggering optional background sync."
+              );
+              triggerSync(ethAddress);
+              setIsSyncing(false);
+            }
+          }
+        } catch (err) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "An unknown error occurred during initial load."
+          );
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      initialLoad();
     } else if (!isResolvingAddress && (!isValidAddress || !ethAddress)) {
       console.log("Address/ENS is invalid or could not be resolved.");
+      setError(resolverError || "Invalid address or ENS name provided.");
+      setIsLoading(false);
+      setIsSyncing(false);
       setEvents([]);
-      setActivityLoading(false);
-      setActivityError(
-        resolverError || "Invalid address or ENS name provided."
-      );
+
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
     }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
   }, [
     ethAddress,
     isValidAddress,
     isResolvingAddress,
     resolverError,
-    fetchActivityPage,
+    fetchEvents,
+    checkSyncStatus,
+    triggerSync,
+    pagination.limit,
   ]);
 
-  const handlePageChange = (newPage: number) => {
-    if (
-      ethAddress &&
-      newPage > 0 &&
-      newPage <= totalPages &&
-      newPage !== currentPage
-    ) {
-      fetchActivityPage(newPage, ethAddress);
+  useEffect(() => {
+    if (isSyncing && ethAddress) {
+      console.log("Polling effect: isSyncing is true, starting interval.");
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+
+      pollingIntervalRef.current = setInterval(async () => {
+        console.log("Polling: Checking sync status...");
+        const currentStatus = await checkSyncStatus(ethAddress);
+        console.log(`Polling: Current status is ${currentStatus}`);
+
+        if (currentStatus === "idle") {
+          console.log(
+            "Polling: Sync finished. Clearing interval and fetching final data."
+          );
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          setIsSyncing(false);
+          setIsLoading(true);
+          try {
+            const finalEventData = await fetchEvents(
+              1,
+              ethAddress,
+              pagination.limit
+            );
+            setEvents(finalEventData.events);
+            setPagination(finalEventData.pagination);
+            setError(null);
+            console.log(
+              `Polling: Fetched final data. Events: ${finalEventData.events.length}`
+            );
+          } catch (err) {
+            setError(
+              err instanceof Error
+                ? err.message
+                : "Failed to load final activity data after sync."
+            );
+          } finally {
+            setIsLoading(false);
+          }
+        }
+      }, POLLING_INTERVAL);
+
+      return () => {
+        console.log("Polling effect cleanup: Clearing interval.");
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      };
+    } else {
+      console.log(
+        "Polling effect: isSyncing is false or no ethAddress, ensuring interval is cleared."
+      );
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
     }
-  };
+  }, [isSyncing, ethAddress, checkSyncStatus, fetchEvents, pagination.limit]);
+
+  const handlePageChange = useCallback(
+    async (newPage: number) => {
+      if (
+        ethAddress &&
+        newPage > 0 &&
+        newPage <= pagination.totalPages &&
+        newPage !== pagination.currentPage &&
+        !isLoading
+      ) {
+        console.log(`Paginating to page ${newPage}`);
+        setIsLoading(true);
+        setError(null);
+        try {
+          const pageData = await fetchEvents(
+            newPage,
+            ethAddress,
+            pagination.limit
+          );
+          setEvents(pageData.events);
+          setPagination(pageData.pagination);
+        } catch (err) {
+          setError(
+            err instanceof Error ? err.message : "Failed to load this page."
+          );
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    },
+    [
+      ethAddress,
+      pagination.totalPages,
+      pagination.currentPage,
+      pagination.limit,
+      isLoading,
+      fetchEvents,
+    ]
+  );
 
   if (isResolvingAddress) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span>Resolving ENS name...</span>
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground">Resolving address...</span>
         </div>
       </div>
     );
@@ -154,19 +339,15 @@ export function ActivityClientWrapper({ id }: { id: string }) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span>Loading profile data...</span>
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground">Loading profile data...</span>
         </div>
       </div>
     );
   }
 
   if (userDataError) {
-    return (
-      <div className="p-4 text-center text-red-500">
-        Error loading user profile: {userDataError || "Unknown error"}
-      </div>
-    );
+    setError(`Error loading user profile: ${userDataError}`);
   }
 
   return (
@@ -174,12 +355,13 @@ export function ActivityClientWrapper({ id }: { id: string }) {
       <ActivityView
         user={user}
         events={events}
-        isLoading={activityLoading}
-        error={activityError}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalEvents={totalEvents}
-        itemsPerPage={itemsPerPage}
+        isLoading={isLoading}
+        isSyncing={isSyncing}
+        error={error}
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        totalEvents={pagination.totalItems}
+        itemsPerPage={pagination.limit}
         onPageChange={handlePageChange}
       />
     </>
