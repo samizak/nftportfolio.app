@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
 import { usePortfolioData } from "@/hooks/usePortfolioData";
 import { fetchWithRetry } from "@/lib/fetchWithRetry";
+import { useAddressResolver } from "@/hooks/useUserQuery";
 
 interface ActivityApiResponse {
   events: ActivityEvent[];
@@ -26,12 +27,12 @@ export function ActivityClientWrapper({
   forceRefresh,
 }: {
   id: string;
-  forceRefresh: boolean;
+  forceRefresh?: boolean;
 }) {
   const router = useRouter();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [activityLoading, setActivityLoading] = useState<boolean>(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalEvents, setTotalEvents] = useState<number>(0);
@@ -39,24 +40,30 @@ export function ActivityClientWrapper({
   const itemsPerPage = 25;
 
   const {
+    ethAddress,
+    isValidAddress,
+    isResolving: isResolvingAddress,
+    error: resolverError,
+  } = useAddressResolver(id);
+
+  const {
     user,
-    isLoading: isUserLoading,
-    isResolvingAddress,
-    error: userError,
-  } = useUserData(id);
+    isLoading: isUserDataLoading,
+    error: userDataError,
+  } = useUserData(ethAddress);
 
   const { fetchingNFTs, fetchProgress } = usePortfolioData(id);
 
   useEffect(() => {
-    if (userError && userError.includes("Invalid address")) {
+    if (userDataError && userDataError.includes("Invalid address")) {
       router.push("/");
     }
-  }, [userError, router]);
+  }, [userDataError, router]);
 
   const fetchActivityPage = useCallback(
     async (page: number, address: string) => {
-      setLoading(true);
-      setError(null);
+      setActivityLoading(true);
+      setActivityError(null);
       setEvents([]);
 
       const relativePath = `/api/event/by-account/${address}?page=${page}&limit=${itemsPerPage}`;
@@ -85,39 +92,92 @@ export function ActivityClientWrapper({
         }
       } catch (err) {
         console.error("Error fetching activity page:", err);
-        setError(
+        setActivityError(
           err instanceof Error ? err.message : "Failed to load activity data."
         );
       } finally {
-        setLoading(false);
+        setActivityLoading(false);
       }
     },
     [itemsPerPage]
   );
 
   useEffect(() => {
-    if (id) {
+    if (!isResolvingAddress && isValidAddress && ethAddress) {
+      console.log(
+        `Resolved address ${ethAddress}, fetching activity page 1...`
+      );
       setEvents([]);
       setCurrentPage(1);
       setTotalPages(1);
       setTotalEvents(0);
-      setError(null);
-      fetchActivityPage(1, id);
-    } else {
+      setActivityError(null);
+      fetchActivityPage(1, ethAddress);
+    } else if (!isResolvingAddress && (!isValidAddress || !ethAddress)) {
+      console.log("Address/ENS is invalid or could not be resolved.");
       setEvents([]);
-      setCurrentPage(1);
-      setTotalPages(1);
-      setTotalEvents(0);
-      setError("No wallet address provided.");
-      setLoading(false);
+      setActivityLoading(false);
+      setActivityError(
+        resolverError || "Invalid address or ENS name provided."
+      );
     }
-  }, [id, fetchActivityPage]);
+  }, [
+    ethAddress,
+    isValidAddress,
+    isResolvingAddress,
+    resolverError,
+    fetchActivityPage,
+  ]);
 
   const handlePageChange = (newPage: number) => {
-    if (newPage > 0 && newPage <= totalPages && newPage !== currentPage) {
-      fetchActivityPage(newPage, id);
+    if (
+      ethAddress &&
+      newPage > 0 &&
+      newPage <= totalPages &&
+      newPage !== currentPage
+    ) {
+      fetchActivityPage(newPage, ethAddress);
     }
   };
+
+  if (isResolvingAddress) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span>Resolving ENS name...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if ((!isValidAddress || !ethAddress) && !isResolvingAddress) {
+    const errorToShow = resolverError || "Invalid address or ENS name.";
+    return (
+      <div className="p-4 text-center text-red-500">
+        Error: {errorToShow} Please check the name or address.
+      </div>
+    );
+  }
+
+  if (isUserDataLoading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span>Loading profile data...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (userDataError) {
+    return (
+      <div className="p-4 text-center text-red-500">
+        Error loading user profile: {userDataError || "Unknown error"}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -130,26 +190,17 @@ export function ActivityClientWrapper({
           startTime={fetchProgress.startTime}
         />
       )}
-      {isUserLoading || !user ? (
-        <div className="fixed inset-0 flex items-center justify-center">
-          <div className="flex flex-col items-center space-y-3">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <span>Loading profile data...</span>
-          </div>
-        </div>
-      ) : (
-        <ActivityView
-          user={user}
-          events={events}
-          isLoading={loading}
-          error={error}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalEvents={totalEvents}
-          itemsPerPage={itemsPerPage}
-          onPageChange={handlePageChange}
-        />
-      )}
+      <ActivityView
+        user={user}
+        events={events}
+        isLoading={activityLoading}
+        error={activityError}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalEvents={totalEvents}
+        itemsPerPage={itemsPerPage}
+        onPageChange={handlePageChange}
+      />
     </>
   );
 }
