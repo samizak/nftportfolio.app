@@ -9,24 +9,38 @@ import { useState } from "react";
 // Function to resolve an ENS name to an address
 async function resolveEnsName(name: string): Promise<string | null> {
   try {
-    const resolveData = await fetchWithRetry(`/api/ens/resolve/${name}`);
+    const resolveData = await fetchWithRetry<{
+      address?: string;
+      error?: string;
+    }>(`/api/ens/resolve/${name}`);
 
-    // console.log("ENS resolve data:", resolveData);
-
-    // Since fetchWithRetry now returns the parsed JSON directly
-    // we need to check if we have valid data instead of checking response.ok
-    if (!resolveData || resolveData.error) {
-      throw new Error(resolveData?.error || "Failed to resolve ENS name");
+    // Check for backend-reported errors (like not found)
+    if (resolveData?.error) {
+      console.warn(`ENS resolution failed for ${name}: ${resolveData.error}`);
+      return null; // Return null for known resolution failures (e.g., 404)
     }
 
-    if (!resolveData.address) {
-      throw new Error("No address found for this ENS name");
+    if (resolveData?.address) {
+      return resolveData.address;
     }
 
-    return resolveData.address;
-  } catch (error) {
-    console.error("ENS resolution error:", error);
-    throw error;
+    // Handle cases where response is unexpected but not an explicit error
+    console.warn(
+      `Unexpected response structure for ENS resolution of ${name}:`,
+      resolveData
+    );
+    return null;
+  } catch (error: any) {
+    // Distinguish between fetch errors and actual resolution failures captured above
+    // If fetchWithRetry threw (e.g., 500 error), rethrow it.
+    // Otherwise, resolution failure was handled (returned null).
+    if (error.message.startsWith("HTTP error!")) {
+      console.error(`ENS resolution HTTP error for ${name}:`, error);
+      throw error; // Rethrow actual HTTP/network errors
+    }
+    // Log other unexpected errors during the try block
+    console.error(`Unexpected error during ENS resolution for ${name}:`, error);
+    return null; // Treat other errors as resolution failure
   }
 }
 
@@ -34,7 +48,6 @@ async function resolveEnsName(name: string): Promise<string | null> {
 export function useAddressResolver(inputAddress: string | null) {
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
 
-  // Immediately check if it's a valid ETH address
   const isDirectEthAddress = inputAddress ? isAddress(inputAddress) : false;
   const isEnsName = inputAddress
     ? inputAddress.toLowerCase().endsWith(".eth")
@@ -44,58 +57,66 @@ export function useAddressResolver(inputAddress: string | null) {
     if (!input) return null;
 
     const isEthAddress = isAddress(input);
-    const isEnsName = input.toLowerCase().endsWith(".eth");
+    const isEns = input.toLowerCase().endsWith(".eth");
 
-    if (!isEthAddress && !isEnsName) {
+    if (!isEthAddress && !isEns) {
+      // Neither valid address nor ENS pattern
       return null;
     }
 
     if (isEthAddress) {
-      console.log({ "useUserQuery.ts": input });
+      // It's already a valid address
       return input;
     }
 
-    // Resolve ENS name
+    // --- Resolve ENS name --- //
     setIsResolvingAddress(true);
     try {
       const address = await resolveEnsName(input);
+      // resolveEnsName now returns null on failure instead of throwing for 404s
       return address;
     } catch (error) {
-      console.error("Error resolving address:", error);
-      throw error;
+      // This catch block now mainly handles unexpected/network errors from resolveEnsName
+      console.error(`Error resolving ENS ${input}:`, error);
+      throw error; // Rethrow to let react-query handle it as an error state
     } finally {
       setIsResolvingAddress(false);
     }
   };
 
-  // Only use the query for ENS names, not for direct ETH addresses
   const addressQuery = useQuery({
     queryKey: ["resolveAddress", inputAddress],
     queryFn: async () => {
       if (!inputAddress) return null;
-      try {
-        return await resolveAddress(inputAddress);
-      } catch (error) {
-        console.error("Address resolution query failed:", error);
-        throw error;
-      }
+      // No need for try-catch here, react-query handles errors thrown by resolveAddress
+      return await resolveAddress(inputAddress);
     },
-    enabled: !!inputAddress && !isDirectEthAddress, // Skip query for direct ETH addresses
+    enabled: !!inputAddress && !isDirectEthAddress,
     retry: 2,
+    // Consider adding staleTime or gcTime if needed
   });
 
-  // For direct ETH addresses, return immediately without waiting for the query
+  // Determine final ethAddress
   const ethAddress = isDirectEthAddress ? inputAddress : addressQuery.data;
+  // Determine if the input was valid (either direct address or resolved ENS)
+  const isValid =
+    isDirectEthAddress || (addressQuery.isSuccess && !!addressQuery.data);
+  // Error is only relevant if it wasn't a direct address and the query failed
+  const queryError =
+    !isDirectEthAddress && addressQuery.isError
+      ? addressQuery.error instanceof Error
+        ? addressQuery.error.message
+        : "Failed to resolve ENS"
+      : null;
 
   return {
-    ethAddress,
+    ethAddress: ethAddress ?? null, // Ensure ethAddress is null if resolution fails
     isEnsName,
-    isValidAddress: isDirectEthAddress || !!addressQuery.data,
+    isValidAddress: isValid,
     isResolving:
       (!isDirectEthAddress && addressQuery.isLoading) || isResolvingAddress,
-    error:
-      addressQuery.error instanceof Error ? addressQuery.error.message : null,
-    resolveAddress,
+    error: queryError,
+    resolveAddress, // Expose resolveAddress if needed externally (unlikely)
   };
 }
 

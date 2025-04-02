@@ -191,7 +191,7 @@ export function usePortfolioData(id: string | null) {
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ collections: batch }),
+              body: JSON.stringify({ collection_slugs: batch }),
             }
           );
         });
@@ -208,47 +208,71 @@ export function usePortfolioData(id: string | null) {
         }, {} as Record<string, any>);
         // --- End Batching Logic --- //
 
-        // Use the combined data
         const collectionsData = combinedCollectionsData;
 
-        if (Object.keys(collectionsData).length === 0) {
-          // Handle case where no valid collection data was returned from any batch
-          console.warn("No valid collection data received after batching.");
-          setCollections([]);
-          setTotalValue(0);
-          // No need to throw error here, just proceed with empty data
-        } else {
-          // Process collection data (using the combined 'collectionsData')
-          const collectionDetails = collectionSlugs.map((slug) => {
-            const collectionInfo = collectionsData[slug]?.info || {};
-            const priceInfo = collectionsData[slug]?.price || {};
+        // --- ENHANCED PROCESSING (Merge Cache Hits with Preliminary Data) --- //
+        // We use the preliminary data structure (already set in state)
+        // and update it with data from cache hits.
+
+        let calculatedTotalValue = 0;
+
+        const finalCollectionDetails = collectionSlugs.map((slug) => {
+          const preliminaryData = collections.find(
+            (c) => c.collection === slug
+          ) || {
+            // Fallback in case preliminary data isn't found (should not happen)
+            collection: slug,
+            name: slug,
+            quantity: nftsByCollection[slug]?.count || 0,
+            image_url: "",
+            is_verified: false,
+            floor_price: 0,
+            total_value: 0,
+          };
+
+          const cachedData = collectionsData[slug];
+          const hasCacheHit =
+            cachedData &&
+            Object.keys(cachedData).length > 0 &&
+            (cachedData.info || cachedData.price);
+
+          if (hasCacheHit) {
+            // Cache Hit: Use data from Redis
+            const collectionInfo = cachedData.info || {};
+            const priceInfo = cachedData.price || {};
             const floorPrice = priceInfo.floor_price || 0;
-            const count = nftsByCollection[slug].count;
+            const count = preliminaryData.quantity; // Use count from preliminary data
+            const totalValue = floorPrice * count;
+            calculatedTotalValue += totalValue; // Add to total value
 
             return {
-              collection: slug,
-              name: collectionInfo.name || slug,
-              quantity: count,
-              image_url: collectionInfo.image_url || "",
+              ...preliminaryData, // Start with preliminary data
+              name: collectionInfo.name || preliminaryData.name, // Prefer cached name
+              image_url: collectionInfo.image_url || preliminaryData.image_url, // Prefer cached image
               is_verified: collectionInfo.safelist_status === "verified",
               floor_price: floorPrice,
-              total_value: floorPrice * count,
+              total_value: totalValue,
             };
-          });
+          } else {
+            // Cache Miss: Return preliminary data with 0 value
+            return {
+              ...preliminaryData,
+              floor_price: 0,
+              total_value: 0,
+              is_verified: false, // Ensure verified is false for misses
+            };
+          }
+        });
 
-          // Calculate total value
-          const totalPortfolioValue = collectionDetails.reduce(
-            (sum, item) => sum + (item.total_value || 0),
-            0
-          );
+        console.log(
+          `Total portfolio value from cached data: ${calculatedTotalValue} ETH`
+        );
+        setTotalValue(calculatedTotalValue);
+        setCollections(finalCollectionDetails); // SET FINAL MERGED COLLECTIONS
 
-          console.log(`Total portfolio value: ${totalPortfolioValue} ETH`);
-
-          // Update state with data
-          setTotalValue(totalPortfolioValue);
-          setCollections(collectionDetails);
-        }
-        console.log("Portfolio data update complete");
+        console.log(
+          "Background collection processing finished using cache data."
+        );
       } catch (error) {
         console.error("Error during portfolio data fetch/processing:", error);
         setError(
