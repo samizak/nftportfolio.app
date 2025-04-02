@@ -6,24 +6,19 @@ import { formatThousandSeparator } from "@/utils/formatters";
 
 interface LoadingScreenProps {
   status: string;
-  count: number;
-  startTime: number;
 }
 
-export default function LoadingScreen({
-  status,
-  count,
-  startTime,
-}: LoadingScreenProps) {
+export default function LoadingScreen({ status }: LoadingScreenProps) {
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [mountTime] = useState(() => Date.now());
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+      setElapsedTime(Math.floor((Date.now() - mountTime) / 1000));
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [startTime]);
+  }, [mountTime]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -46,11 +41,6 @@ export default function LoadingScreen({
 
           <div className="space-y-2 text-center">
             <h3 className="text-xl font-semibold">{status}</h3>
-            {count > 0 && (
-              <p className="text-muted-foreground">
-                Found {formatThousandSeparator(count)} NFTs so far
-              </p>
-            )}
           </div>
 
           <div className="w-full bg-muted rounded-full h-2.5">

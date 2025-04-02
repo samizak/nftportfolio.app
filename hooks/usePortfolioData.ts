@@ -2,87 +2,83 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useUser } from "@/context/UserContext";
-import { useFormattedEthPrice } from "@/hooks/useEthPriceQuery";
 import { fetchWithRetry } from "../lib/fetchWithRetry";
-import { CollectionData } from "@/types/nft";
 import { useAddressResolver } from "@/hooks/useUserQuery";
 
-// Define expected response type for NFT fetch
-type NftApiResponse = { nfts: any[]; nextCursor: string | null };
-// Define structure for NFT grouping - include contract address
-type NftsByCollection = Record<
-  string, // slug
-  { count: number; nfts: any[]; contractAddress?: string } // Added contractAddress
->;
+// --- NEW TYPE DEFINITIONS (Based on User Guide) --- //
 
-// Define structure for the nested API response
-interface CollectionInfo {
-  collection?: string; // Optional fields based on backend response
-  name?: string;
-  description?: string;
-  image_url?: string;
-  banner_image_url?: string;
-  owner?: string;
-  safelist_status?: string;
-  category?: string;
-  is_disabled?: boolean;
-  is_nsfw?: boolean;
-  trait_offers_enabled?: boolean;
-  opensea_url?: string;
-  twitter_username?: string;
-  discord_url?: string;
-  contracts?: { address: string; chain: string }[];
-  // Add stats if needed, but acknowledge potential inaccuracy
-  total_supply?: number;
-  num_owners?: number;
-  total_volume?: number;
-  market_cap?: number;
+// For individual NFTs list endpoint
+interface NftApiResponse {
+  nfts: any[]; // Assuming 'any' for now, can be refined if NFT structure is known
+  nextCursor: string | null;
 }
 
-interface CollectionPrice {
-  symbol?: string;
-  floor_price?: number;
-  floor_price_symbol?: string;
-  floor_price_usd?: number;
+// For Summary endpoint response data
+export interface CollectionBreakdown {
+  slug: string;
+  name: string;
+  nftCount: number;
+  totalValueEth: number;
+  totalValueUsd: number;
+  imageUrl?: string;
+  floorPriceEth?: number; // Make optional as it might be missing/null
 }
 
-type CollectionCacheData =
-  | {
-      info: CollectionInfo | null;
-      price: CollectionPrice | null;
-    }
-  | {}; // Can be empty object for total failure
+export interface PortfolioSummaryData {
+  totalValueEth: number;
+  totalValueUsd: number;
+  nftCount: number;
+  collectionCount: number;
+  breakdown: CollectionBreakdown[];
+  calculatedAt: string; // ISO String or Timestamp
+  cacheStatus?: "hit" | "miss" | "revalidated";
+  // Add other fields if provided by the backend
+}
 
-type CollectionBatchApiResponse = { data: Record<string, CollectionCacheData> };
+// For the overall Summary endpoint response structure
+interface SummaryApiResponse {
+  status: "ready" | "calculating" | "error";
+  data: PortfolioSummaryData | null;
+  message?: string;
+}
+
+// For internal state tracking of the summary process
+type SummaryStatus = "idle" | "loading" | "polling" | "ready" | "error";
+
+// --- CONSTANTS --- //
+const POLLING_INTERVAL = 7000; // 7 seconds (adjust as needed)
+const MAX_POLLING_ATTEMPTS = 15; // Safety limit for polling
+
+// --- HOOK --- //
 
 export function usePortfolioData(id: string | null) {
   const { setError: setGlobalError } = useUser();
-  // Assuming ethPrice might be used elsewhere or for display formatting
-  const { price: ethPrice } = useFormattedEthPrice();
 
   // --- State --- //
-  const [allNfts, setAllNfts] = useState<any[]>([]);
-  const [collections, setCollections] = useState<CollectionData[]>([]);
-  const [totalNfts, setTotalNfts] = useState(0); // Tracks loaded NFTs
-  const [totalValue, setTotalValue] = useState(0);
-  const [nextNftCursor, setNextNftCursor] = useState<string | null>(null);
-  const [hasMoreNfts, setHasMoreNfts] = useState<boolean>(true);
 
-  const [isLoadingInitial, setIsLoadingInitial] = useState<boolean>(true);
-  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
-  const [isProcessingPrices, setIsProcessingPrices] = useState<boolean>(false);
+  // Summary State
+  const [summaryData, setSummaryData] = useState<PortfolioSummaryData | null>(
+    null
+  );
+  const [summaryStatus, setSummaryStatus] = useState<SummaryStatus>("idle");
+  const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false); // Tracks initial load and polling
 
-  const [fetchProgress, setFetchProgress] = useState({
-    status: "Initializing...",
-    count: 0,
-    startTime: 0,
-  });
-  const [hookError, setHookError] = useState<string | null>(null); // Local error state
+  // Individual NFT List State
+  const [individualNfts, setIndividualNfts] = useState<any[]>([]);
+  const [nftCursor, setNftCursor] = useState<string | null>(null);
+  const [hasMoreIndividualNfts, setHasMoreIndividualNfts] =
+    useState<boolean>(true);
+  const [isLoadingInitialNfts, setIsLoadingInitialNfts] =
+    useState<boolean>(false);
+  const [isLoadingMoreNfts, setIsLoadingMoreNfts] = useState<boolean>(false);
 
-  // Ref to prevent concurrent fetches
-  const isFetchingRef = useRef(false);
+  // General State
+  const [hookError, setHookError] = useState<string | null>(null);
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingAttemptsRef = useRef<number>(0);
+  const isFetchingNftsRef = useRef(false); // For preventing concurrent NFT fetches
 
-  // --- Address Resolution --- //
+  // Address Resolution
   const {
     ethAddress,
     isValidAddress,
@@ -90,359 +86,250 @@ export function usePortfolioData(id: string | null) {
     error: resolverError,
   } = useAddressResolver(id);
 
-  // --- Global Error Handling --- //
-  useEffect(() => {
-    if (resolverError) {
-      setGlobalError(resolverError);
-      setHookError(resolverError); // Also set local error
-      setIsLoadingInitial(false); // Stop initial load if resolver fails
+  // --- Helper: Clear Polling Timeout --- //
+  const clearPolling = useCallback(() => {
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+      pollingTimeoutRef.current = null;
     }
-  }, [resolverError, setGlobalError]);
+    pollingAttemptsRef.current = 0; // Reset attempts
+  }, []);
 
-  // --- Helper: Process NFTs and Fetch Prices --- //
-  const processNftBatch = useCallback(
-    async (nftsToProcess: any[]) => {
-      if (nftsToProcess.length === 0) return;
-
-      setIsProcessingPrices(true);
-      setFetchProgress((prev) => ({
-        ...prev,
-        status: "Processing collections...",
-      }));
-
-      // 1. Group NFTs, get slugs, AND get contract addresses
-      const nftsByCollectionBatch = nftsToProcess.reduce((acc, nft) => {
-        const collectionSlug = nft.collection;
-        if (!collectionSlug) return acc;
-        if (!acc[collectionSlug]) {
-          acc[collectionSlug] = {
-            count: 0,
-            nfts: [],
-            // Store the first contract address found for this slug
-            contractAddress: nft.contract,
-          };
-        }
-        acc[collectionSlug].count++;
-        acc[collectionSlug].nfts.push(nft);
-        return acc;
-      }, {} as NftsByCollection);
-
-      const newCollectionSlugs = Object.keys(nftsByCollectionBatch);
-
-      if (newCollectionSlugs.length === 0) {
-        setIsProcessingPrices(false);
-        return;
+  // --- Function to Fetch Portfolio Summary (Handles Polling) --- //
+  const fetchPortfolioSummary = useCallback(
+    async (address: string, isPolling = false) => {
+      if (!isPolling) {
+        console.log(`Fetching portfolio summary for ${address}...`);
+        setHookError(null); // Clear previous errors on new request
+        setSummaryStatus("loading");
+        setIsLoadingSummary(true);
+        pollingAttemptsRef.current = 0; // Reset polling attempts for new request
       }
 
-      // 2. Create/Update Preliminary Collection Data
-      setCollections((prevCollections) => {
-        const updatedCollections = [...prevCollections];
-        newCollectionSlugs.forEach((slug) => {
-          const existingIndex = updatedCollections.findIndex(
-            (c) => c.collection === slug
-          );
-          const batchInfo = nftsByCollectionBatch[slug];
-          const firstNft = batchInfo.nfts[0];
-
-          if (existingIndex === -1) {
-            // New collection
-            updatedCollections.push({
-              collection: slug,
-              name: firstNft?.collection?.name || slug, // Use name from NFT if available
-              quantity: batchInfo.count,
-              image_url: firstNft?.image_preview_url || "", // Use preview URL
-              is_verified: false,
-              floor_price: 0,
-              total_value: 0,
-            });
-          } else {
-            // Existing collection, update quantity
-            updatedCollections[existingIndex] = {
-              ...updatedCollections[existingIndex],
-              quantity:
-                updatedCollections[existingIndex].quantity + batchInfo.count,
-              // Keep existing price/value data until updated later
-            };
-          }
-        });
-        return updatedCollections;
-      });
-
-      // 3. Fetch Prices for *these* Slugs - **MODIFY REQUEST**
-      setFetchProgress((prev) => ({
-        ...prev,
-        status: `Fetching prices for ${newCollectionSlugs.length} collections...`,
-      }));
-
-      const BATCH_SIZE = 50;
-      const slugBatches: string[][] = [];
-      const addressBatches: string[][] = [];
-
-      for (let i = 0; i < newCollectionSlugs.length; i += BATCH_SIZE) {
-        const slugBatch = newCollectionSlugs.slice(i, i + BATCH_SIZE);
-        slugBatches.push(slugBatch);
-        // Create corresponding address batch
-        addressBatches.push(
-          slugBatch.map(
-            (slug) => nftsByCollectionBatch[slug]?.contractAddress || ""
-          )
-        );
-      }
-
-      const pricePromises = slugBatches.map((slugBatch, index) => {
-        const addressBatch = addressBatches[index]; // Get corresponding addresses
-        // Check if lengths match for safety, though they should
-        if (slugBatch.length !== addressBatch.length) {
-          console.error("Mismatch between slug and address batch lengths!");
-          return Promise.resolve(null); // Skip this batch on error
+      // Safety check for polling attempts
+      if (isPolling) {
+        pollingAttemptsRef.current += 1;
+        console.log(`Polling summary attempt: ${pollingAttemptsRef.current}`);
+        if (pollingAttemptsRef.current > MAX_POLLING_ATTEMPTS) {
+          console.error("Max polling attempts reached.");
+          setHookError("Portfolio calculation timed out.");
+          setSummaryStatus("error");
+          setIsLoadingSummary(false);
+          clearPolling();
+          return;
         }
-        return fetchWithRetry<CollectionBatchApiResponse>(
-          "/api/collection/batch-collections",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            // Send both slugs and addresses
-            body: JSON.stringify({
-              collection_slugs: slugBatch,
-              contract_addresses: addressBatch,
-            }),
-          }
-        );
-      });
+      }
 
       try {
-        const priceResults = await Promise.allSettled(pricePromises);
+        const result = await fetchWithRetry<SummaryApiResponse>(
+          `/api/portfolio/summary/${address}`
+        );
 
-        // Combine results - **MODIFY RESPONSE HANDLING**
-        const combinedPriceData = priceResults.reduce((acc, result) => {
-          if (result.status === "fulfilled" && result.value?.data) {
-            // Add null checks if result.value could be null from fetchWithRetry
-            return { ...acc, ...result.value.data };
-          }
-          if (result.status === "rejected") {
-            console.warn(
-              "A collection price batch API call failed:",
-              result.reason
-            );
-          }
-          return acc;
-        }, {} as Record<string, CollectionCacheData>); // Use new type
+        if (!result) {
+          throw new Error("No response from summary endpoint.");
+        }
 
-        // 4. Update Collections State with Prices - **MODIFY DATA ACCESS**
-        setCollections((prevCollections) => {
-          return prevCollections.map((collection) => {
-            if (!newCollectionSlugs.includes(collection.collection)) {
-              return collection;
-            }
+        console.log("Summary API Response:", result);
 
-            const slug = collection.collection;
-            const cacheResult = combinedPriceData[slug]; // This is CollectionCacheData
-
-            // Check if it's NOT a total failure (empty object indicates failure)
-            const isTotalFailure =
-              !cacheResult || Object.keys(cacheResult).length === 0;
-
-            if (
-              !isTotalFailure &&
-              "info" in cacheResult &&
-              "price" in cacheResult
-            ) {
-              // Check structure
-              const collectionInfo = cacheResult.info; // Might be null
-              const priceInfo = cacheResult.price; // Might be null
-              const floorPrice = priceInfo?.floor_price || 0;
-              const newTotalValue = floorPrice * collection.quantity;
-
-              return {
-                ...collection,
-                name: collectionInfo?.name || collection.name,
-                image_url: collectionInfo?.image_url || collection.image_url,
-                is_verified: collectionInfo?.safelist_status === "verified",
-                floor_price: floorPrice,
-                total_value: newTotalValue,
-              };
-            } else {
-              // Total failure OR unexpected structure from cache
-              // Keep preliminary data, ensure value is 0
-              console.warn(
-                `No valid cache data or total fetch failure for slug: ${slug}`
-              );
-              return {
-                ...collection,
-                floor_price: 0,
-                total_value: 0,
-                is_verified: false, // Reset verification on failure
-              };
-            }
-          });
-        });
-      } catch (priceError) {
-        console.error("Error processing prices:", priceError);
-        setFetchProgress((prev) => ({
-          ...prev,
-          status: "Error fetching some prices.",
-        }));
-      } finally {
-        setIsProcessingPrices(false);
+        // Handle based on status
+        if (result.status === "ready" && result.data) {
+          setSummaryData(result.data);
+          setSummaryStatus("ready");
+          setIsLoadingSummary(false);
+          clearPolling();
+          console.log("Portfolio summary loaded.", result.data);
+        } else if (result.status === "calculating") {
+          setSummaryStatus("polling");
+          setIsLoadingSummary(true); // Keep loading true while polling
+          // Schedule next poll
+          clearPolling(); // Clear previous timeout just in case
+          pollingTimeoutRef.current = setTimeout(() => {
+            fetchPortfolioSummary(address, true); // Poll again
+          }, POLLING_INTERVAL);
+          console.log(
+            `Portfolio calculating, polling again in ${
+              POLLING_INTERVAL / 1000
+            }s (Attempt: ${pollingAttemptsRef.current})`
+          );
+        } else {
+          // Handle 'error' status from backend or other unexpected cases
+          const errorMsg =
+            result.message || "Failed to load portfolio summary.";
+          console.error("Error from summary API:", errorMsg, result);
+          setHookError(errorMsg);
+          setSummaryStatus("error");
+          setIsLoadingSummary(false);
+          clearPolling();
+        }
+      } catch (err) {
+        console.error("Fetch error getting summary:", err);
+        const errorMsg =
+          err instanceof Error
+            ? err.message
+            : "An unknown error occurred fetching summary";
+        setHookError(errorMsg);
+        setSummaryStatus("error");
+        setIsLoadingSummary(false);
+        clearPolling();
       }
     },
-    [] // No external dependencies needed here usually
+    [clearPolling] // Dependency on the stable clearPolling function
   );
 
-  // --- Recalculate Total Value whenever Collections Change --- //
-  useEffect(() => {
-    const newTotalValue = collections.reduce(
-      (sum, collection) => sum + (collection.total_value || 0),
-      0
-    );
-    console.log(
-      "[Effect] Recalculating Total Value:",
-      newTotalValue,
-      "from",
-      collections.length,
-      "collections"
-    );
-    setTotalValue(newTotalValue);
-  }, [collections]); // Dependency: Run whenever collections array changes
-
-  // --- Function to Load More NFTs --- //
-  const loadMoreNfts = useCallback(async () => {
-    if (
-      !hasMoreNfts ||
-      isLoadingMore ||
-      !ethAddress ||
-      !nextNftCursor ||
-      isFetchingRef.current
-    ) {
-      return;
-    }
-    isFetchingRef.current = true;
-    setIsLoadingMore(true);
-    setHookError(null);
-    console.log("Loading more NFTs with cursor:", nextNftCursor);
+  // --- Function to Fetch Initial Page of Individual NFTs --- //
+  const fetchInitialIndividualNfts = useCallback(async (address: string) => {
+    if (isFetchingNftsRef.current) return;
+    isFetchingNftsRef.current = true;
+    setIsLoadingInitialNfts(true);
+    setIndividualNfts([]); // Clear previous NFTs
+    setNftCursor(null);
+    setHasMoreIndividualNfts(true); // Assume more initially
+    console.log("Fetching initial page of individual NFTs...");
 
     try {
-      const url = `/api/nft/by-account?address=${ethAddress}&cursor=${nextNftCursor}`;
+      const url = `/api/nft/by-account?address=${address}`;
       const response = await fetchWithRetry<NftApiResponse>(url);
 
       if (response && Array.isArray(response.nfts)) {
-        const newNfts = response.nfts;
-        if (newNfts.length > 0) {
-          setAllNfts((prev) => [...prev, ...newNfts]);
-          setTotalNfts((prev) => prev + newNfts.length);
-          // Process this new batch of NFTs (updates collections, fetches prices)
-          await processNftBatch(newNfts);
-        } else {
-          console.log("Received empty NFT array, assuming end of list.");
-        }
-        setNextNftCursor(response.nextCursor);
-        setHasMoreNfts(!!response.nextCursor && newNfts.length > 0); // Also check if last page had items
+        setIndividualNfts(response.nfts);
+        setNftCursor(response.nextCursor);
+        setHasMoreIndividualNfts(!!response.nextCursor);
+        console.log(`Fetched ${response.nfts.length} initial NFTs.`);
       } else {
-        console.warn("Unexpected response format when loading more NFTs");
-        setHasMoreNfts(false); // Stop loading more if format is wrong
+        console.warn("No initial NFTs found or unexpected response format.");
+        setIndividualNfts([]);
+        setHasMoreIndividualNfts(false);
       }
     } catch (err) {
-      console.error("Error loading more NFTs:", err);
-      setHookError(
-        err instanceof Error ? err.message : "Failed to load more NFTs"
-      );
-      setHasMoreNfts(false); // Stop loading on error
+      console.error("Error fetching initial individual NFTs:", err);
+      // Append to existing hookError if summary already failed, otherwise set it
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to fetch NFTs";
+      setHookError((prev) => (prev ? `${prev}; ${errorMsg}` : errorMsg));
+      setIndividualNfts([]);
+      setHasMoreIndividualNfts(false);
     } finally {
-      setIsLoadingMore(false);
-      isFetchingRef.current = false;
+      isFetchingNftsRef.current = false;
+      setIsLoadingInitialNfts(false);
     }
-  }, [ethAddress, nextNftCursor, hasMoreNfts, isLoadingMore, processNftBatch]);
+  }, []); // No external dependencies needed
 
-  // --- Initial Data Fetch Effect --- //
-  useEffect(() => {
-    // Only run if we have a valid, resolved address
-    if (!ethAddress || !isValidAddress) {
-      // If address is invalid from the start, set loading to false
-      if (!isResolvingAddress) {
-        setIsLoadingInitial(false);
-      }
+  // --- Function to Load More Individual NFTs --- //
+  const loadMoreIndividualNfts = useCallback(async () => {
+    if (
+      !hasMoreIndividualNfts ||
+      isLoadingMoreNfts ||
+      !ethAddress ||
+      !nftCursor ||
+      isFetchingNftsRef.current
+    ) {
       return;
     }
+    isFetchingNftsRef.current = true;
+    setIsLoadingMoreNfts(true);
+    console.log("Loading more individual NFTs with cursor:", nftCursor);
 
-    // Prevent re-fetching if already fetched for this address (handled by ref)
-    if (isFetchingRef.current) return;
+    try {
+      const url = `/api/nft/by-account?address=${ethAddress}&cursor=${nftCursor}`;
+      const response = await fetchWithRetry<NftApiResponse>(url);
 
-    const fetchInitialData = async () => {
-      if (isFetchingRef.current) return;
-      isFetchingRef.current = true;
-      setIsLoadingInitial(true);
-      setHookError(null);
-      setAllNfts([]); // Reset state for new address
-      setCollections([]);
-      setTotalNfts(0);
-      setTotalValue(0);
-      setNextNftCursor(null);
-      setHasMoreNfts(true);
-      console.log("Starting initial NFT fetch for:", ethAddress);
-      setFetchProgress({
-        status: "Fetching first page of NFTs...",
-        count: 0,
-        startTime: Date.now(),
-      });
-
-      try {
-        const url = `/api/nft/by-account?address=${ethAddress}`;
-        const response = await fetchWithRetry<NftApiResponse>(url);
-
-        if (response && Array.isArray(response.nfts)) {
-          const initialNfts = response.nfts;
-          setAllNfts(initialNfts);
-          setTotalNfts(initialNfts.length);
-          setNextNftCursor(response.nextCursor);
-          setHasMoreNfts(!!response.nextCursor);
-
-          if (initialNfts.length > 0) {
-            // Process this first batch (updates collections, fetches prices)
-            await processNftBatch(initialNfts);
-          } else {
-            console.log("No NFTs found on initial fetch.");
-            // If no NFTs, no need to process prices
-            setIsProcessingPrices(false);
-          }
-        } else {
-          console.warn("No NFTs found or unexpected response on initial fetch");
-          setHasMoreNfts(false);
-        }
-      } catch (err) {
-        console.error("Error fetching initial NFTs:", err);
-        setHookError(
-          err instanceof Error ? err.message : "Failed to fetch initial NFTs"
-        );
-        setHasMoreNfts(false);
-      } finally {
-        setIsLoadingInitial(false);
-        isFetchingRef.current = false;
+      if (response && Array.isArray(response.nfts)) {
+        setIndividualNfts((prevNfts) => [...prevNfts, ...response.nfts]);
+        setNftCursor(response.nextCursor);
+        setHasMoreIndividualNfts(!!response.nextCursor);
+        console.log(`Fetched ${response.nfts.length} more NFTs.`);
+      } else {
+        console.warn("No more NFTs found or unexpected response format.");
+        setHasMoreIndividualNfts(false);
+        setNftCursor(null);
       }
-    };
+    } catch (err) {
+      console.error("Error loading more individual NFTs:", err);
+      const errorMsg =
+        err instanceof Error ? err.message : "Failed to load more NFTs";
+      setHookError((prev) => (prev ? `${prev}; ${errorMsg}` : errorMsg));
+      // Consider if we should stop trying to load more on error
+      setHasMoreIndividualNfts(false);
+    } finally {
+      isFetchingNftsRef.current = false;
+      setIsLoadingMoreNfts(false);
+    }
+  }, [ethAddress, nftCursor, hasMoreIndividualNfts, isLoadingMoreNfts]);
 
-    fetchInitialData();
+  // --- Effect to Handle Address Resolution Errors --- //
+  useEffect(() => {
+    if (resolverError) {
+      setGlobalError(resolverError);
+      setHookError(resolverError);
+      setSummaryStatus("error");
+      setIsLoadingSummary(false);
+      setIsLoadingInitialNfts(false);
+      clearPolling();
+    }
+  }, [resolverError, setGlobalError, clearPolling]);
 
-    // Cleanup function to reset fetching ref if component unmounts or address changes mid-fetch
+  // --- Effect to Trigger Initial Fetches on Address Change --- //
+  useEffect(() => {
+    // Clear previous state and timeouts
+    setSummaryData(null);
+    setSummaryStatus("idle");
+    setIsLoadingSummary(false);
+    setIndividualNfts([]);
+    setNftCursor(null);
+    setHasMoreIndividualNfts(true);
+    setIsLoadingInitialNfts(false);
+    setIsLoadingMoreNfts(false);
+    setHookError(null);
+    clearPolling();
+    isFetchingNftsRef.current = false;
+
+    if (ethAddress && isValidAddress && !isResolvingAddress) {
+      fetchPortfolioSummary(ethAddress); // Start summary fetch (will set loading state)
+      fetchInitialIndividualNfts(ethAddress); // Start initial NFT fetch (will set loading state)
+    } else if (!isResolvingAddress && !isValidAddress && id) {
+      // Handle invalid resolved address explicitly
+      setHookError(`Invalid address or ENS name: ${id}`);
+      setSummaryStatus("error");
+    } else {
+      // Set loading states false if not fetching (e.g., during resolution or if address is null)
+      setIsLoadingSummary(false);
+      setIsLoadingInitialNfts(false);
+    }
+
+    // Cleanup function for address changes / unmount
     return () => {
-      isFetchingRef.current = false;
+      clearPolling();
     };
-  }, [ethAddress, isValidAddress, isResolvingAddress, processNftBatch]); // Rerun if address or validity changes
-
-  // --- Return Value --- //
-  return {
-    collections, // Array of CollectionData, updated incrementally
-    totalNfts, // Number of NFTs loaded so far
-    totalValue, // Accumulated value based on loaded prices
-    isLoadingInitial, // True only during the very first NFT page load
-    isLoadingMore, // True when fetching subsequent NFT pages
-    isProcessingPrices, // True when price batches are being fetched/processed
-    hasMoreNfts, // True if a nextNftCursor exists
-    loadMoreNfts, // Function to trigger loading the next page
-    fetchProgress, // Progress status/count
-    error: hookError, // Errors specifically from this hook's operations
-    // Include ethAddress, isValidAddress, isResolvingAddress if needed by consuming component
+  }, [
     ethAddress,
     isValidAddress,
     isResolvingAddress,
+    id,
+    fetchPortfolioSummary,
+    fetchInitialIndividualNfts,
+    clearPolling,
+  ]);
+
+  // --- Return Values --- //
+  return {
+    // Address Info
+    ethAddress,
+    isValidAddress,
+    isResolvingAddress,
+
+    // Summary Data & State (Primary return values for this view)
+    summaryData,
+    summaryStatus,
+    isLoadingSummary,
+
+    // Individual NFT List & State (Keep logic internally, but don't return for main view)
+    // individualNfts,
+    // isLoadingInitialNfts,
+    // hasMoreIndividualNfts,
+    // loadMoreIndividualNfts,
+    // isLoadingMoreNfts,
+
+    // General Error State
+    error: hookError,
   };
 }

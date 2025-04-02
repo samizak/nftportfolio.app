@@ -11,84 +11,93 @@ import { containerClass } from "@/lib/utils";
 import Footer from "@/components/layout/Footer";
 import Header from "@/components/layout/Header";
 import { Currency } from "@/context/CurrencyContext";
-import { CollectionData } from "@/types/nft";
+import {
+  PortfolioSummaryData,
+  CollectionBreakdown,
+} from "@/hooks/usePortfolioData";
 
 interface PortfolioViewProps {
   user: any;
-  data: CollectionData[];
+  summary: PortfolioSummaryData | null;
+  isLoading: boolean;
   ethPrice?: number;
-  totalNfts: number;
-  totalValue: number;
   selectedCurrency: Currency;
-  isLoadingMoreNfts: boolean;
-  isProcessingPrices: boolean;
-  hasMoreNfts: boolean;
-  loadMoreNfts: () => void;
 }
 
 export default function PortfolioView({
   user,
-  data,
+  summary,
+  isLoading,
   ethPrice,
-  totalNfts,
-  totalValue,
   selectedCurrency,
-  isLoadingMoreNfts,
-  isProcessingPrices,
-  hasMoreNfts,
-  loadMoreNfts,
 }: PortfolioViewProps) {
+  const collections: CollectionBreakdown[] = summary?.breakdown || [];
+  const totalValue = summary?.totalValueEth ?? 0;
+  const totalNfts = summary?.nftCount ?? 0;
+  const lastUpdated = summary?.calculatedAt
+    ? new Date(summary.calculatedAt)
+    : new Date();
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredData, setFilteredData] = useState<CollectionData[]>(data);
+  const [filteredData, setFilteredData] =
+    useState<CollectionBreakdown[]>(collections);
 
   const priceForComponents = ethPrice || 0;
 
   useEffect(() => {
+    setFilteredData(collections || []);
+  }, [collections]);
+
+  useEffect(() => {
+    if (!collections) return;
     if (searchQuery === "") {
-      setFilteredData(data);
+      setFilteredData(collections);
     } else {
       setFilteredData(
-        data.filter((item) =>
+        collections.filter((item) =>
           item.name?.toLowerCase().includes(searchQuery.toLowerCase())
         )
       );
     }
-  }, [searchQuery, data]);
+  }, [searchQuery, collections]);
 
   const handleApplyFilters = (field: string, min: string, max: string) => {
+    if (!collections) return;
     const minValue = min === "" ? -Infinity : parseFloat(min);
     const maxValue = max === "" ? Infinity : parseFloat(max);
-    const filtered = data.filter((item: any) => {
-      let value;
+
+    const filtered = collections.filter((item) => {
+      let value: number | undefined;
       switch (field) {
         case "quantity":
-          value = item.quantity;
+          value = item.nftCount;
           break;
         case "floorPrice":
-          value = item.floor_price;
+          value = item.floorPriceEth;
           break;
         case "value":
-          value = item.total_value;
+          value = item.totalValueEth;
           break;
         case "portfolioPercentage":
-          value = (item.total_value / totalValue) * 100;
+          value = totalValue > 0 ? (item.totalValueEth / totalValue) * 100 : 0;
           break;
         default:
-          value = 0;
+          value = undefined;
       }
-      return value >= minValue && value <= maxValue;
+      return (
+        value !== undefined &&
+        value !== null &&
+        value >= minValue &&
+        value <= maxValue
+      );
     });
-    setFilteredData(
-      data.filter((item) => filtered.some((f) => f.name === item.name))
-    );
+    setFilteredData(filtered);
   };
 
   const handleClearFilters = () => {
-    setFilteredData(data);
+    setFilteredData(collections || []);
+    setSearchQuery("");
   };
-
-  const [timeframe, setTimeframe] = useState("all");
-  const [lastUpdated, setLastUpdated] = useState(new Date());
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -98,10 +107,8 @@ export default function PortfolioView({
         <UserProfile user={user} />
 
         <PortfolioStats
-          data={data}
+          summary={summary}
           ethPrice={priceForComponents}
-          totalNfts={totalNfts}
-          totalValue={totalValue}
           selectedCurrency={selectedCurrency}
         />
 
@@ -117,51 +124,28 @@ export default function PortfolioView({
             <Card className="h-full">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex flex-col space-y-2">
-                  <p>Your NFT Collection</p>
+                  <p>Your NFT Collection ({collections?.length ?? 0} found)</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Last updated: {lastUpdated.toLocaleString()}
+                    Summary updated: {lastUpdated.toLocaleString()}
                   </p>
                 </CardTitle>
 
                 <div className="w-72">
                   <Input
-                    placeholder="Search NFTs..."
+                    placeholder="Search Collections..."
                     value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setFilteredData(
-                        data.filter((item) =>
-                          item.name
-                            ?.toLowerCase()
-                            .includes(e.target.value.toLowerCase())
-                        )
-                      );
-                    }}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
               </CardHeader>
               <CardContent>
-                {filteredData.length === 0 && data.length > 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <p className="text-muted-foreground mb-2">
-                      No collections found with the current filters
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Try adjusting your search term or filter criteria
-                    </p>
-                  </div>
-                ) : (
-                  <DataTable
-                    data={filteredData}
-                    ethPrice={priceForComponents}
-                    totalValue={totalValue}
-                    selectedCurrency={selectedCurrency}
-                    isLoadingMoreNfts={isLoadingMoreNfts}
-                    isProcessingPrices={isProcessingPrices}
-                    hasMoreNfts={hasMoreNfts}
-                    loadMoreNfts={loadMoreNfts}
-                  />
-                )}
+                <DataTable
+                  data={filteredData}
+                  ethPrice={priceForComponents}
+                  totalValue={totalValue}
+                  selectedCurrency={selectedCurrency}
+                  isLoading={isLoading}
+                />
               </CardContent>
             </Card>
           </div>

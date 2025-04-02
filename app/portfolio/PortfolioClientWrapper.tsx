@@ -14,7 +14,7 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
   const router = useRouter();
   const { selectedCurrency } = useCurrency();
 
-  // Use the existing hooks for user data and portfolio data
+  // User data hook
   const {
     user,
     isLoading: isUserLoading,
@@ -22,20 +22,15 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
     error: userError,
   } = useUserData(id);
 
+  // Portfolio data hook (Simplified return values)
   const {
-    collections,
-    totalNfts,
-    totalValue,
-    isLoadingInitial: isPortfolioLoadingInitial,
-    isLoadingMore: isPortfolioLoadingMore,
-    isProcessingPrices,
-    hasMoreNfts,
-    loadMoreNfts,
-    fetchProgress,
+    summaryData,
+    summaryStatus,
+    isLoadingSummary,
     error: portfolioError,
   } = usePortfolioData(id);
 
-  // Fetch formatted ETH price using the dedicated hook
+  // ETH price hook
   const {
     price: ethPrice,
     isLoading: isEthPriceLoading,
@@ -46,23 +41,34 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
   const combinedError =
     userError ||
     portfolioError ||
-    (ethPriceError ? ethPriceError.message : null);
+    (ethPriceError
+      ? `Failed to load ETH price: ${ethPriceError.message}`
+      : null);
 
-  if (combinedError) {
+  // --- Error Display --- //
+  // Show error if combinedError exists AND summary isn't actively loading/polling
+  if (
+    combinedError &&
+    summaryStatus !== "loading" &&
+    summaryStatus !== "polling"
+  ) {
     const errorMessage = combinedError;
+    const isNotFoundError =
+      errorMessage?.includes("404") || // User not found
+      errorMessage?.includes("not found") || // Portfolio not found
+      errorMessage?.includes("Invalid address"); // Explicit invalid address error
+
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-background to-background/50">
         <div className="relative backdrop-blur-sm bg-card/30 border border-border/50 rounded-xl p-8 max-w-md w-full shadow-lg">
           <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-xl" />
           <div className="relative">
             <h2 className="text-2xl font-bold text-foreground mb-3">
-              {errorMessage?.includes("404")
-                ? "Portfolio Not Found"
-                : "Something went wrong"}
+              {isNotFoundError ? "Portfolio Not Found" : "Something went wrong"}
             </h2>
             <p className="text-muted-foreground mb-6">
-              {errorMessage?.includes("404")
-                ? "We couldn't find any NFTs for this address. The address might be incorrect or doesn't own any NFTs."
+              {isNotFoundError
+                ? "We couldn't find data for this address. The address might be incorrect or the portfolio is empty."
                 : errorMessage || "An unexpected error occurred."}
             </p>
             <div className="flex gap-3">
@@ -74,7 +80,7 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
                 <ArrowLeft className="h-4 w-4" />
                 Back to Home
               </Button>
-              {!userError.includes("404") && (
+              {!isNotFoundError && (
                 <Button
                   onClick={() => window.location.reload()}
                   className="bg-primary/90 hover:bg-primary"
@@ -89,47 +95,58 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
     );
   }
 
-  // Combine loading states for the main loading screen
-  const showLoadingScreen = isPortfolioLoadingInitial || isResolvingAddress;
-  // Use user loading state for the profile spinner
-  const showUserSpinner = isUserLoading;
+  // --- Loading State Logic --- //
+  // Show main loading screen if summary is loading/polling OR address is resolving
+  const showMainLoadingScreen =
+    (isLoadingSummary || isResolvingAddress) &&
+    summaryStatus !== "ready" &&
+    summaryStatus !== "error";
 
+  // Determine the message for the loading screen
+  let loadingStatusMessage = "Loading...";
+  if (isResolvingAddress) {
+    loadingStatusMessage = "Resolving address...";
+  } else if (summaryStatus === "polling") {
+    loadingStatusMessage = "Calculating portfolio summary...";
+  } else if (summaryStatus === "loading") {
+    loadingStatusMessage = "Fetching portfolio summary...";
+  }
+
+  // Show user spinner only if user data is specifically loading
+  // and the main loading screen isn't already covering it.
+  const showUserSpinner = isUserLoading && !showMainLoadingScreen;
+
+  // --- Main Render Logic --- //
   return (
     <>
-      {showLoadingScreen && (
-        <LoadingScreen
-          status={
-            isResolvingAddress ? "Resolving ENS name..." : fetchProgress.status
-          }
-          count={fetchProgress.count}
-          startTime={fetchProgress.startTime}
-        />
-      )}
+      {/* Main Loading Screen (for summary/resolution) */}
+      {showMainLoadingScreen && <LoadingScreen status={loadingStatusMessage} />}
 
-      {showUserSpinner ? (
-        <div className="fixed inset-0 flex items-center justify-center">
+      {/* User Profile Loading Spinner (if needed and main loading isn't active) */}
+      {showUserSpinner && (
+        <div className="fixed inset-0 flex items-center justify-center bg-background/50 z-40">
           <div className="flex flex-col items-center space-y-3">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <span>Loading profile data...</span>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-muted-foreground">
+              Loading profile data...
+            </span>
           </div>
         </div>
-      ) : (
-        user &&
-        !showLoadingScreen && (
+      )}
+
+      {/* Portfolio View (Render when user and summary are ready) */}
+      {user &&
+        summaryStatus === "ready" &&
+        summaryData &&
+        !showMainLoadingScreen && (
           <PortfolioView
             user={user}
-            data={collections}
+            summary={summaryData}
+            isLoading={isLoadingSummary}
             ethPrice={ethPrice}
-            totalNfts={totalNfts}
-            totalValue={totalValue}
             selectedCurrency={selectedCurrency}
-            isLoadingMoreNfts={isPortfolioLoadingMore}
-            isProcessingPrices={isProcessingPrices}
-            hasMoreNfts={hasMoreNfts}
-            loadMoreNfts={loadMoreNfts}
           />
-        )
-      )}
+        )}
     </>
   );
 }

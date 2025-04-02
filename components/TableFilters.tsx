@@ -83,6 +83,7 @@ export default function TableFilters({
                 id="min-value"
                 type="number"
                 placeholder="Min"
+                min="0"
                 value={filterValues.min}
                 onChange={(e) =>
                   setFilterValues({ ...filterValues, min: e.target.value })
@@ -95,6 +96,7 @@ export default function TableFilters({
                 id="max-value"
                 type="number"
                 placeholder="Max"
+                min="0"
                 value={filterValues.max}
                 onChange={(e) =>
                   setFilterValues({ ...filterValues, max: e.target.value })
@@ -104,13 +106,16 @@ export default function TableFilters({
           </div>
 
           <div className="flex space-x-2 pt-2">
-            <Button onClick={handleApplyFilter} className="flex-1">
+            <Button
+              onClick={handleApplyFilter}
+              className="flex-1 cursor-pointer"
+            >
               Apply Filter
             </Button>
             <Button
               variant="outline"
               onClick={handleClearFilters}
-              className="flex items-center"
+              className="flex items-center cursor-pointer"
             >
               <FilterX className="h-4 w-4 mr-2" />
               Clear
