@@ -113,7 +113,7 @@ export default function PortfolioStats({
                 >
                   {topCollection.name}
                 </a>
-                <div className="text-xl font-bold">
+                <div className="text-lg font-semibold text-muted-foreground">
                   Ξ{" "}
                   {formatThousandSeparator(
                     +(topCollection.totalValueEth || 0).toFixed(2)
@@ -121,6 +121,12 @@ export default function PortfolioStats({
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {formatThousandSeparator(topCollection.nftCount || 0)} items
+                  {topCollection.floorPriceEth != null && (
+                    <span className="text-xs">
+                      {" at Ξ "}
+                      {topCollection.floorPriceEth.toFixed(4)} floor
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
