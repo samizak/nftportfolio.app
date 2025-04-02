@@ -246,7 +246,7 @@ export function DataTable({
                         href={`https://opensea.io/collection/${collection.slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-semibold text-base hover:text-blue-600 transition-colors inline-block break-words truncate max-w-[calc(100%-20px)]"
+                        className="font-semibold text-base hover:text-blue-600 transition-colors inline-block break-words truncate"
                         title={collection.name}
                       >
                         {collection.name}
@@ -255,7 +255,7 @@ export function DataTable({
                         <TooltipProvider delayDuration={100}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <BadgeCheck className="h-6 w-6 text-blue-500 flex-shrink-0 cursor-help" />
+                              <BadgeCheck className="h-5 w-5 text-blue-500 flex-shrink-0 cursor-help" />
                             </TooltipTrigger>
                             <TooltipContent
                               sideOffset={4}
