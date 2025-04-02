@@ -1,4 +1,38 @@
 import { formatDistanceToNow } from "date-fns";
+import { parseISO } from "date-fns";
+
+// Define the expected structure for the account parameter
+interface Account {
+  address: string;
+  user?: {
+    username: string;
+  };
+}
+
+// Define the structure for events used in filtering/sorting
+interface Event {
+  nft?: {
+    name?: string;
+    collection?: {
+      name?: string;
+    };
+  };
+  event_type?: string;
+  from_account?: {
+    user?: {
+      username?: string;
+    };
+  };
+  to_account?: {
+    user?: {
+      username?: string;
+    };
+  };
+  created_date: string; // Required for sorting
+  payment?: {
+    quantity?: string; // Optional, used for sorting
+  };
+}
 
 /**
  * Returns the appropriate badge color class based on event type
@@ -33,18 +67,20 @@ export const formatAddress = (address: string) => {
 /**
  * Gets the display name for an account (username or formatted address)
  */
-export const getAccountName = (account: any) => {
+export const getAccountName = (account: Account | null) => {
   if (!account) return "Unknown";
   return account.user?.username || formatAddress(account.address);
 };
 
 /**
- * Formats a date string to a relative time format (e.g., "2 days ago")
+ * Formats an ISO date string to a human-readable relative time
  */
-export const formatEventDate = (dateString: string) => {
+export const formatEventDate = (isoDateString: string | null) => {
+  if (!isoDateString) {
+    return "Invalid Date";
+  }
   try {
-    if (!dateString) return "Unknown time";
-    const date = new Date(dateString);
+    const date = parseISO(isoDateString);
     if (isNaN(date.getTime())) return "Invalid date";
     return formatDistanceToNow(date, { addSuffix: true });
   } catch (error) {
@@ -56,7 +92,7 @@ export const formatEventDate = (dateString: string) => {
 /**
  * Filters events based on a search query
  */
-export const filterEvents = (events: any[], query: string) => {
+export const filterEvents = (events: Event[], query: string): Event[] => {
   if (!query) return events;
 
   const lowercaseQuery = query.toLowerCase();
@@ -90,12 +126,12 @@ export const filterEvents = (events: any[], query: string) => {
  * Sorts events by specified criteria
  */
 export const sortEvents = (
-  events: any[],
+  events: Event[],
   sortBy: string = "date",
   sortOrder: "asc" | "desc" = "desc"
-) => {
+): Event[] => {
   return [...events].sort((a, b) => {
-    let valueA, valueB;
+    let valueA: number, valueB: number;
 
     switch (sortBy) {
       case "date":

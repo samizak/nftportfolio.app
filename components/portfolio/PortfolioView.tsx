@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PortfolioStats from "@/components/portfolio/PortfolioStats";
 import UserProfile from "@/components/UserProfile";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import TableFilters from "@/components/TableFilters";
 import { DataTable } from "@/components/portfolio/DataTable";
 import { containerClass } from "@/lib/utils";
@@ -40,13 +40,22 @@ export default function PortfolioView({
   ethPrice,
   selectedCurrency,
 }: PortfolioViewProps) {
-  const collections: CollectionBreakdown[] = summary?.breakdown || [];
+  // Memoize the collections array
+  const collections = useMemo(
+    () => summary?.breakdown || [],
+    [summary?.breakdown]
+  );
+
   const totalValue = summary?.totalValueEth ?? 0;
-  const lastUpdated = summary?.calculatedAt
-    ? new Date(summary.calculatedAt)
-    : new Date();
+  const lastUpdated = useMemo(
+    () =>
+      // Also memoize lastUpdated date calculation
+      summary?.calculatedAt ? new Date(summary.calculatedAt) : new Date(),
+    [summary?.calculatedAt]
+  );
 
   const [searchQuery, setSearchQuery] = useState("");
+  // Initialize filteredData based on memoized collections
   const [filteredData, setFilteredData] =
     useState<CollectionBreakdown[]>(collections);
 
