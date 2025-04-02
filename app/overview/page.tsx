@@ -25,10 +25,14 @@ import {
   BarChart3,
   Wallet,
   TrendingUp,
+  Loader2,
 } from "lucide-react";
 import { cn, containerClass } from "@/lib/utils";
 import Footer from "@/components/layout/Footer";
 import Header from "@/components/layout/Header";
+import { useAddressResolver } from "@/hooks/useUserQuery";
+import { useUserData } from "@/hooks/useUserData";
+import { useSearchParams } from "next/navigation";
 
 // Mock data for the pie chart
 const PORTFOLIO_DATA = [
@@ -49,8 +53,67 @@ const ANALYTICS_DATA = {
   totalVolume: 156.8,
 };
 
-export default function OverviewPage({ user }: { user: any }) {
-  const [, setTimeframe] = useState("all");
+export default function OverviewPage() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") || "";
+
+  const [timeframe, setTimeframe] = useState("all");
+
+  const {
+    ethAddress,
+    isValidAddress,
+    isResolving: isResolvingAddress,
+    error: resolverError,
+  } = useAddressResolver(id);
+
+  const {
+    user,
+    isLoading: isUserDataLoading,
+    error: userDataError,
+  } = useUserData(ethAddress);
+
+  const combinedError = resolverError || userDataError;
+
+  if (isResolvingAddress) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground">Resolving address...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isUserDataLoading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground">Loading profile data...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (combinedError) {
+    return (
+      <div className="p-4 text-center text-red-500">
+        Error: {combinedError}. Please check the address or try again.
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground">Preparing overview...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -381,7 +444,7 @@ export default function OverviewPage({ user }: { user: any }) {
                 </CardContent>
               </Card>
             </div>
-          </div>{" "}
+          </div>
         </div>
       </main>
       <Footer />
