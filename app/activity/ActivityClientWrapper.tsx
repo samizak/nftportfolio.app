@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { ActivityEvent } from "@/components/activity/ActivityTable";
 import ActivityView from "@/components/ActivityView";
 import { Loader2 } from "lucide-react";
@@ -30,7 +29,6 @@ interface SyncStatusResponse {
 const POLLING_INTERVAL = 7000;
 
 export function ActivityClientWrapper({ id }: { id: string }) {
-  const router = useRouter();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);

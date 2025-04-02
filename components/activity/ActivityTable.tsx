@@ -30,9 +30,7 @@ import {
   CircleDashed,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format, parseISO } from "date-fns";
-import { formatAddress } from "@/lib/activityUtils";
-import { formatCurrency } from "@/lib/utils";
+import { format } from "date-fns";
 
 export interface ActivityEvent {
   id: string;

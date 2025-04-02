@@ -57,11 +57,10 @@ export default function OverviewPage() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id") || "";
 
-  const [timeframe, setTimeframe] = useState("all");
+  const [, setTimeframe] = useState("all");
 
   const {
     ethAddress,
-    isValidAddress,
     isResolving: isResolvingAddress,
     error: resolverError,
   } = useAddressResolver(id);
