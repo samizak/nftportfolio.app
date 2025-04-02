@@ -2,6 +2,8 @@
 
 A comprehensive web application for tracking, analyzing, and visualizing your NFT portfolio across the Ethereum blockchain.
 
+This project utilizes a dedicated backend service, available at: [`nft-backend-service`](https://github.com/samizak/nft-backend-service)
+
 ## Portfolio Page
 
 ![Portfolio Preview](public/portfolio-preview.png)
