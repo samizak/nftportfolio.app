@@ -4,10 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ActivityEvent } from "@/components/activity/ActivityTable";
 import ActivityView from "@/components/ActivityView";
-import LoadingScreen from "@/components/LoadingScreen";
 import { Loader2 } from "lucide-react";
 import { useUserData } from "@/hooks/useUserData";
-import { usePortfolioData } from "@/hooks/usePortfolioData";
 import { fetchWithRetry } from "@/lib/fetchWithRetry";
 import { useAddressResolver } from "@/hooks/useUserQuery";
 
@@ -22,13 +20,7 @@ interface ActivityApiResponse {
   address?: string; // Optional address field
 }
 
-export function ActivityClientWrapper({
-  id,
-  forceRefresh,
-}: {
-  id: string;
-  forceRefresh?: boolean;
-}) {
+export function ActivityClientWrapper({ id }: { id: string }) {
   const router = useRouter();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [activityLoading, setActivityLoading] = useState<boolean>(false);
@@ -51,8 +43,6 @@ export function ActivityClientWrapper({
     isLoading: isUserDataLoading,
     error: userDataError,
   } = useUserData(ethAddress);
-
-  const { fetchProgress } = usePortfolioData(id);
 
   useEffect(() => {
     if (userDataError && userDataError.includes("Invalid address")) {
