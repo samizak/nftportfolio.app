@@ -37,7 +37,7 @@ export default function UserProfile({ user }: UserProfileProps) {
         duration: 2000,
       });
       setTimeout(() => setCopiedField(null), 2000);
-    } catch (err) {
+    } catch {
       toast.error("Failed to copy to clipboard");
     }
   };

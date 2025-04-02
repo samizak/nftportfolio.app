@@ -35,9 +35,9 @@ export default function ActivityView({
   return (
     <div className="flex flex-col min-h-screen">
       <main className={`${containerClass} p-4 flex-grow pb-20`}>
-        <Header user={user} activePage="activity" />
+        {user && <Header user={user} activePage="activity" />}
 
-        <UserProfile user={user} />
+        {user && <UserProfile user={user} />}
 
         {error && (
           <div className="mb-4 p-4 text-center text-red-600 bg-red-100 border border-red-400 rounded-md">

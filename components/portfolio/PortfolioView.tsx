@@ -16,8 +16,17 @@ import {
   CollectionBreakdown,
 } from "@/hooks/usePortfolioData";
 
+// Define User type based on UserProfile props
+interface User {
+  name: string;
+  ethHandle: string;
+  ethAddress: string;
+  avatar: string;
+  banner: string;
+}
+
 interface PortfolioViewProps {
-  user: any;
+  user: User | null; // Use the User type, allow null
   summary: PortfolioSummaryData | null;
   isLoading: boolean;
   ethPrice?: number;
@@ -33,7 +42,6 @@ export default function PortfolioView({
 }: PortfolioViewProps) {
   const collections: CollectionBreakdown[] = summary?.breakdown || [];
   const totalValue = summary?.totalValueEth ?? 0;
-  const totalNfts = summary?.nftCount ?? 0;
   const lastUpdated = summary?.calculatedAt
     ? new Date(summary.calculatedAt)
     : new Date();
@@ -102,9 +110,9 @@ export default function PortfolioView({
   return (
     <div className="flex flex-col min-h-screen">
       <main className={`${containerClass} p-4 flex-grow pb-20`}>
-        <Header user={user} activePage="portfolio" />
+        {user && <Header user={user} activePage="portfolio" />}
 
-        <UserProfile user={user} />
+        {user && <UserProfile user={user} />}
 
         <PortfolioStats
           summary={summary}

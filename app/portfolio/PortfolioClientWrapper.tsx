@@ -31,11 +31,7 @@ export function PortfolioClientWrapper({ id }: { id: string | null }) {
   } = usePortfolioData(id);
 
   // ETH price hook
-  const {
-    price: ethPrice,
-    isLoading: isEthPriceLoading,
-    error: ethPriceError,
-  } = useFormattedEthPrice();
+  const { price: ethPrice, error: ethPriceError } = useFormattedEthPrice();
 
   // Combine error states
   const combinedError =

@@ -1,7 +1,7 @@
 // Update the base URL for API requests
 const API_BASE_URL = "http://localhost:3001";
 
-export async function fetchWithRetry<T = any>(
+export async function fetchWithRetry<T = unknown>(
   url: string,
   options?: RequestInit,
   retries = 3,
