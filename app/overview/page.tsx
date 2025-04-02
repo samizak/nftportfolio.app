@@ -49,7 +49,7 @@ const ANALYTICS_DATA = {
 };
 
 export default function OverviewPage({ user }: { user: any }) {
-  const [timeframe, setTimeframe] = useState("all");
+  const [, setTimeframe] = useState("all");
 
   return (
     <div className="flex flex-col min-h-screen">
