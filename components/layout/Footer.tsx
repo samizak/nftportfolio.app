@@ -23,7 +23,7 @@ export default function Footer() {
         className={`${containerClass} mx-auto flex items-center justify-between px-4`}
       >
         <div className="flex items-center gap-2">
-          <HoverCard>
+          <HoverCard openDelay={200}>
             <HoverCardTrigger asChild>
               <div className="flex items-center gap-1.5 font-medium cursor-pointer">
                 <div className="relative flex items-center">
