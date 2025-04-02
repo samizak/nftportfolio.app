@@ -9,10 +9,51 @@ import { useAddressResolver } from "@/hooks/useUserQuery";
 
 // Define expected response type for NFT fetch
 type NftApiResponse = { nfts: any[]; nextCursor: string | null };
-// Define expected response type for collection batch fetch
-type CollectionBatchApiResponse = { data: Record<string, any> };
-// Define structure for NFT grouping
-type NftsByCollection = Record<string, { count: number; nfts: any[] }>;
+// Define structure for NFT grouping - include contract address
+type NftsByCollection = Record<
+  string, // slug
+  { count: number; nfts: any[]; contractAddress?: string } // Added contractAddress
+>;
+
+// Define structure for the nested API response
+interface CollectionInfo {
+  collection?: string; // Optional fields based on backend response
+  name?: string;
+  description?: string;
+  image_url?: string;
+  banner_image_url?: string;
+  owner?: string;
+  safelist_status?: string;
+  category?: string;
+  is_disabled?: boolean;
+  is_nsfw?: boolean;
+  trait_offers_enabled?: boolean;
+  opensea_url?: string;
+  twitter_username?: string;
+  discord_url?: string;
+  contracts?: { address: string; chain: string }[];
+  // Add stats if needed, but acknowledge potential inaccuracy
+  total_supply?: number;
+  num_owners?: number;
+  total_volume?: number;
+  market_cap?: number;
+}
+
+interface CollectionPrice {
+  symbol?: string;
+  floor_price?: number;
+  floor_price_symbol?: string;
+  floor_price_usd?: number;
+}
+
+type CollectionCacheData =
+  | {
+      info: CollectionInfo | null;
+      price: CollectionPrice | null;
+    }
+  | {}; // Can be empty object for total failure
+
+type CollectionBatchApiResponse = { data: Record<string, CollectionCacheData> };
 
 export function usePortfolioData(id: string | null) {
   const { setError: setGlobalError } = useUser();
@@ -69,12 +110,17 @@ export function usePortfolioData(id: string | null) {
         status: "Processing collections...",
       }));
 
-      // 1. Group NFTs and get unique slugs *from this batch*
+      // 1. Group NFTs, get slugs, AND get contract addresses
       const nftsByCollectionBatch = nftsToProcess.reduce((acc, nft) => {
-        const collectionSlug = nft.collection; // Assuming slug is directly on nft.collection
+        const collectionSlug = nft.collection;
         if (!collectionSlug) return acc;
         if (!acc[collectionSlug]) {
-          acc[collectionSlug] = { count: 0, nfts: [] };
+          acc[collectionSlug] = {
+            count: 0,
+            nfts: [],
+            // Store the first contract address found for this slug
+            contractAddress: nft.contract,
+          };
         }
         acc[collectionSlug].count++;
         acc[collectionSlug].nfts.push(nft);
@@ -122,85 +168,117 @@ export function usePortfolioData(id: string | null) {
         return updatedCollections;
       });
 
-      // 3. Fetch Prices for *these* Slugs
+      // 3. Fetch Prices for *these* Slugs - **MODIFY REQUEST**
       setFetchProgress((prev) => ({
         ...prev,
         status: `Fetching prices for ${newCollectionSlugs.length} collections...`,
       }));
 
-      const BATCH_SIZE = 50; // Collection batch size
-      const priceBatches = [];
+      const BATCH_SIZE = 50;
+      const slugBatches: string[][] = [];
+      const addressBatches: string[][] = [];
+
       for (let i = 0; i < newCollectionSlugs.length; i += BATCH_SIZE) {
-        priceBatches.push(newCollectionSlugs.slice(i, i + BATCH_SIZE));
+        const slugBatch = newCollectionSlugs.slice(i, i + BATCH_SIZE);
+        slugBatches.push(slugBatch);
+        // Create corresponding address batch
+        addressBatches.push(
+          slugBatch.map(
+            (slug) => nftsByCollectionBatch[slug]?.contractAddress || ""
+          )
+        );
       }
 
-      const pricePromises = priceBatches.map((batch) =>
-        fetchWithRetry<CollectionBatchApiResponse>(
+      const pricePromises = slugBatches.map((slugBatch, index) => {
+        const addressBatch = addressBatches[index]; // Get corresponding addresses
+        // Check if lengths match for safety, though they should
+        if (slugBatch.length !== addressBatch.length) {
+          console.error("Mismatch between slug and address batch lengths!");
+          return Promise.resolve(null); // Skip this batch on error
+        }
+        return fetchWithRetry<CollectionBatchApiResponse>(
           "/api/collection/batch-collections",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ collection_slugs: batch }),
+            // Send both slugs and addresses
+            body: JSON.stringify({
+              collection_slugs: slugBatch,
+              contract_addresses: addressBatch,
+            }),
           }
-        )
-      );
+        );
+      });
 
       try {
         const priceResults = await Promise.allSettled(pricePromises);
+
+        // Combine results - **MODIFY RESPONSE HANDLING**
         const combinedPriceData = priceResults.reduce((acc, result) => {
           if (result.status === "fulfilled" && result.value?.data) {
+            // Add null checks if result.value could be null from fetchWithRetry
             return { ...acc, ...result.value.data };
           }
           if (result.status === "rejected") {
-            console.warn("A collection price batch failed:", result.reason);
+            console.warn(
+              "A collection price batch API call failed:",
+              result.reason
+            );
           }
           return acc;
-        }, {} as Record<string, any>);
+        }, {} as Record<string, CollectionCacheData>); // Use new type
 
-        // 4. Update Collections State with Prices and Calculate Value Delta
+        // 4. Update Collections State with Prices - **MODIFY DATA ACCESS**
         let valueDelta = 0;
         setCollections((prevCollections) => {
           return prevCollections.map((collection) => {
-            // Only update if this collection was part of the current price fetch
             if (!newCollectionSlugs.includes(collection.collection)) {
               return collection;
             }
 
             const slug = collection.collection;
-            const cachedData = combinedPriceData[slug];
-            const hasCacheHit =
-              cachedData &&
-              Object.keys(cachedData).length > 0 &&
-              (cachedData.info || cachedData.price);
+            const cacheResult = combinedPriceData[slug]; // This is CollectionCacheData
 
-            if (hasCacheHit) {
-              const collectionInfo = cachedData.info || {};
-              const priceInfo = cachedData.price || {};
-              const floorPrice = priceInfo.floor_price || 0;
+            // Check if it's NOT a total failure (empty object indicates failure)
+            const isTotalFailure =
+              !cacheResult || Object.keys(cacheResult).length === 0;
+
+            if (
+              !isTotalFailure &&
+              "info" in cacheResult &&
+              "price" in cacheResult
+            ) {
+              // Check structure
+              const collectionInfo = cacheResult.info; // Might be null
+              const priceInfo = cacheResult.price; // Might be null
+              const floorPrice = priceInfo?.floor_price || 0;
               const newTotalValue = floorPrice * collection.quantity;
-              // Calculate diff from previous total_value for this collection
               valueDelta += newTotalValue - (collection.total_value || 0);
 
               return {
                 ...collection,
-                name: collectionInfo.name || collection.name,
-                image_url: collectionInfo.image_url || collection.image_url,
-                is_verified: collectionInfo.safelist_status === "verified",
+                name: collectionInfo?.name || collection.name,
+                image_url: collectionInfo?.image_url || collection.image_url,
+                is_verified: collectionInfo?.safelist_status === "verified",
                 floor_price: floorPrice,
                 total_value: newTotalValue,
               };
+            } else {
+              // Total failure OR unexpected structure from cache
+              // Keep preliminary data, ensure value is 0
+              console.warn(
+                `No valid cache data or total fetch failure for slug: ${slug}`
+              );
+              return {
+                ...collection,
+                floor_price: 0,
+                total_value: 0,
+                is_verified: false, // Reset verification on failure
+              };
             }
-            // If cache miss for this batch, keep existing (likely preliminary 0 value)
-            return {
-              ...collection,
-              floor_price: 0,
-              total_value: 0,
-              is_verified: false,
-            };
           });
         });
 
-        // 5. Update Total Value State
         setTotalValue((prev) => prev + valueDelta);
         console.log(
           `Updated total value by ${valueDelta} ETH from this batch.`
