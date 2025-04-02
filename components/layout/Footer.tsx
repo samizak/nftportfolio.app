@@ -95,6 +95,23 @@ export default function Footer() {
                     NFT Data • Collection & Asset Information
                   </div>
                 </div>
+
+                {/* Add NFTGO entry */}
+                <div className="space-y-2 border-b pb-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Image
+                      src="/nftgo_logo.svg"
+                      alt="NFTGO"
+                      width={20}
+                      height={20}
+                      style={{ height: "auto" }}
+                    />
+                    <span>NFTGO API</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    NFT Data • Floor Prices
+                  </div>
+                </div>
               </div>
             </HoverCardContent>
           </HoverCard>
