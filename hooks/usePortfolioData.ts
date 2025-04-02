@@ -229,7 +229,6 @@ export function usePortfolioData(id: string | null) {
         }, {} as Record<string, CollectionCacheData>); // Use new type
 
         // 4. Update Collections State with Prices - **MODIFY DATA ACCESS**
-        let valueDelta = 0;
         setCollections((prevCollections) => {
           return prevCollections.map((collection) => {
             if (!newCollectionSlugs.includes(collection.collection)) {
@@ -253,7 +252,6 @@ export function usePortfolioData(id: string | null) {
               const priceInfo = cacheResult.price; // Might be null
               const floorPrice = priceInfo?.floor_price || 0;
               const newTotalValue = floorPrice * collection.quantity;
-              valueDelta += newTotalValue - (collection.total_value || 0);
 
               return {
                 ...collection,
@@ -278,11 +276,6 @@ export function usePortfolioData(id: string | null) {
             }
           });
         });
-
-        setTotalValue((prev) => prev + valueDelta);
-        console.log(
-          `Updated total value by ${valueDelta} ETH from this batch.`
-        );
       } catch (priceError) {
         console.error("Error processing prices:", priceError);
         setFetchProgress((prev) => ({
@@ -295,6 +288,22 @@ export function usePortfolioData(id: string | null) {
     },
     [] // No external dependencies needed here usually
   );
+
+  // --- Recalculate Total Value whenever Collections Change --- //
+  useEffect(() => {
+    const newTotalValue = collections.reduce(
+      (sum, collection) => sum + (collection.total_value || 0),
+      0
+    );
+    console.log(
+      "[Effect] Recalculating Total Value:",
+      newTotalValue,
+      "from",
+      collections.length,
+      "collections"
+    );
+    setTotalValue(newTotalValue);
+  }, [collections]); // Dependency: Run whenever collections array changes
 
   // --- Function to Load More NFTs --- //
   const loadMoreNfts = useCallback(async () => {
