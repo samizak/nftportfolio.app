@@ -6,10 +6,11 @@ import CurrencySelector from "@/components/CurrencySelector";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { containerClass } from "@/lib/utils";
 import { useState, FormEvent } from "react";
-import { Search, AlertCircle } from "lucide-react";
+import { Search, AlertCircle, Menu, X } from "lucide-react";
 import { isAddress } from "ethers";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import Link from "next/link";
 
 interface HeaderProps {
   user: User;
@@ -28,7 +29,6 @@ export default function Header({ user, activePage }: HeaderProps) {
 
     if (!query) return;
 
-    // Check if it's a valid Ethereum address or ENS name
     const isEthAddress = isAddress(query);
     const isEnsName = query.toLowerCase().endsWith(".eth");
 
@@ -37,13 +37,10 @@ export default function Header({ user, activePage }: HeaderProps) {
       return;
     }
 
-    // Clear any previous validation errors
     setValidationError(null);
-
-    // Navigate to the appropriate page based on active page
     router.push(`/${activePage}?id=${query}`);
-    setSearchQuery(""); // Clear the search field after submission
-    setMobileMenuOpen(false); // Close mobile menu on search
+    setSearchQuery("");
+    setMobileMenuOpen(false);
   };
 
   return (
@@ -51,17 +48,16 @@ export default function Header({ user, activePage }: HeaderProps) {
       <div className={`${containerClass} mx-auto px-4`}>
         <div className="flex items-center justify-between h-12">
           <div className="flex items-center gap-2">
-            <h1
-              onClick={() => router.push("/")}
-              className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
-            >
-              nftportfolio.app
-            </h1>
+            <Link href="/" className="cursor-pointer">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
+                nftportfolio.app
+              </h1>
+            </Link>
           </div>
 
           <form
             onSubmit={handleSearch}
-            className="max-w-md w-full mx-4 relative hidden sm:flex items-center gap-2 lg:max-w-xs xl:max-w-md"
+            className="max-w-md w-full mx-4 relative hidden sm:flex items-center gap-1 lg:max-w-xs xl:max-w-md"
           >
             <div className="relative flex-grow">
               <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
@@ -96,104 +92,72 @@ export default function Header({ user, activePage }: HeaderProps) {
             </div>
             <Button
               type="submit"
-              variant="secondary"
-              size="sm"
-              className="flex-shrink-0 h-9 cursor-pointer"
+              variant="ghost"
+              size="icon"
+              className="flex-shrink-0 h-9 w-9"
               aria-label="Submit search"
             >
-              Search
+              <Search className="h-4 w-4" />
             </Button>
           </form>
 
-          {/* Desktop navigation */}
-          <div className="hidden sm:flex items-center gap-2">
-            <button
-              onClick={() => router.push(`/overview?id=${user.ethAddress}`)}
-              className={`px-3.5 cursor-pointer py-1.5 rounded-md text-sm mr-2 font-medium transition-all ${
-                activePage === "overview"
-                  ? "bg-primary/90 text-primary-foreground shadow-sm"
-                  : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
-              }`}
+          <div className="hidden sm:flex items-center gap-1">
+            <Link
+              href={`/overview?id=${user.ethAddress}`}
+              className={buttonVariants({
+                variant: activePage === "overview" ? "secondary" : "ghost",
+                size: "sm",
+              })}
             >
               Overview
-            </button>
-            <button
-              onClick={() => router.push(`/portfolio?id=${user.ethAddress}`)}
-              className={`px-3.5 cursor-pointer py-1.5 rounded-md text-sm mr-2 font-medium transition-all ${
-                activePage === "portfolio"
-                  ? "bg-primary/90 text-primary-foreground shadow-sm"
-                  : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
-              }`}
+            </Link>
+            <Link
+              href={`/portfolio?id=${user.ethAddress}`}
+              className={buttonVariants({
+                variant: activePage === "portfolio" ? "secondary" : "ghost",
+                size: "sm",
+              })}
             >
               Portfolio
-            </button>
-            <button
-              onClick={() => router.push(`/activity?id=${user.ethAddress}`)}
-              className={`px-3.5 py-1.5 cursor-pointer rounded-md text-sm font-medium transition-all ${
-                activePage === "activity"
-                  ? "bg-primary/90 text-primary-foreground shadow-sm"
-                  : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
-              }`}
+            </Link>
+            <Link
+              href={`/activity?id=${user.ethAddress}`}
+              className={buttonVariants({
+                variant: activePage === "activity" ? "secondary" : "ghost",
+                size: "sm",
+              })}
             >
               Activity
-            </button>
+            </Link>
 
-            <div className="flex items-center gap-2 pl-2 border-l border-border/40">
+            <div className="flex items-center gap-1 pl-3">
               <CurrencySelector />
               <ThemeToggle />
             </div>
           </div>
 
-          {/* Mobile menu button */}
           <div className="flex sm:hidden items-center gap-2">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 rounded-md text-sm font-medium bg-secondary/70 text-secondary-foreground"
               aria-label="Toggle mobile menu"
             >
               {mobileMenuOpen ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M18 6 6 18"></path>
-                  <path d="m6 6 12 12"></path>
-                </svg>
+                <X className="h-5 w-5" />
               ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="4" x2="20" y1="12" y2="12"></line>
-                  <line x1="4" x2="20" y1="6" y2="6"></line>
-                  <line x1="4" x2="20" y1="18" y2="18"></line>
-                </svg>
+                <Menu className="h-5 w-5" />
               )}
-            </button>
+            </Button>
           </div>
         </div>
 
-        {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="sm:hidden py-3 border-t border-border/40 mt-2 animate-in slide-in-from-top duration-200">
             <div className="space-y-3">
               <form
                 onSubmit={handleSearch}
-                className="relative flex items-center gap-2"
+                className="relative flex items-center gap-1"
               >
                 <div className="relative flex-grow">
                   <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
@@ -228,65 +192,54 @@ export default function Header({ user, activePage }: HeaderProps) {
                 </div>
                 <Button
                   type="submit"
-                  variant="secondary"
-                  size="sm"
-                  className="flex-shrink-0 h-9 cursor-pointer"
+                  variant="ghost"
+                  size="icon"
+                  className="flex-shrink-0 h-9 w-9"
                   aria-label="Submit search"
                 >
-                  Search
+                  <Search className="h-4 w-4" />
                 </Button>
               </form>
 
-              {/* Mobile navigation */}
-              <div className="flex flex-col space-y-2 pt-2">
-                <button
-                  onClick={() => {
-                    router.push(`/overview?id=${user.ethAddress}`);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`px-3.5 py-2 rounded-md text-sm font-medium transition-all ${
-                    activePage === "overview"
-                      ? "bg-primary/90 text-primary-foreground shadow-sm"
-                      : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
-                  }`}
+              <div className="flex flex-col space-y-1 pt-2">
+                <Link
+                  href={`/overview?id=${user.ethAddress}`}
+                  className={buttonVariants({
+                    variant: activePage === "overview" ? "secondary" : "ghost",
+                    size: "sm",
+                    className: "w-full justify-start",
+                  })}
+                  onClick={() => setMobileMenuOpen(false)}
                 >
                   Overview
-                </button>
-                <button
-                  onClick={() => {
-                    router.push(`/portfolio?id=${user.ethAddress}`);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`px-3.5 py-2 rounded-md text-sm font-medium transition-all ${
-                    activePage === "portfolio"
-                      ? "bg-primary/90 text-primary-foreground shadow-sm"
-                      : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
-                  }`}
+                </Link>
+                <Link
+                  href={`/portfolio?id=${user.ethAddress}`}
+                  className={buttonVariants({
+                    variant: activePage === "portfolio" ? "secondary" : "ghost",
+                    size: "sm",
+                    className: "w-full justify-start",
+                  })}
+                  onClick={() => setMobileMenuOpen(false)}
                 >
                   Portfolio
-                </button>
-                <button
-                  onClick={() => {
-                    router.push(`/activity?id=${user.ethAddress}`);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`px-3.5 py-2 rounded-md text-sm font-medium transition-all ${
-                    activePage === "activity"
-                      ? "bg-primary/90 text-primary-foreground shadow-sm"
-                      : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
-                  }`}
+                </Link>
+                <Link
+                  href={`/activity?id=${user.ethAddress}`}
+                  className={buttonVariants({
+                    variant: activePage === "activity" ? "secondary" : "ghost",
+                    size: "sm",
+                    className: "w-full justify-start",
+                  })}
+                  onClick={() => setMobileMenuOpen(false)}
                 >
                   Activity
-                </button>
+                </Link>
               </div>
 
-              {/* Mobile settings */}
-              <div className="flex items-center justify-between pt-2 border-t border-border/30">
-                <span></span>
-                <div className="flex items-center gap-2">
-                  <CurrencySelector />
-                  <ThemeToggle />
-                </div>
+              <div className="flex items-center justify-between pt-3 mt-2 border-t border-border/40">
+                <CurrencySelector />
+                <ThemeToggle />
               </div>
             </div>
           </div>
