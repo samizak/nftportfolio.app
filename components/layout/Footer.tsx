@@ -96,20 +96,20 @@ export default function Footer() {
                   </div>
                 </div>
 
-                {/* Add NFTGO entry */}
+                {/* Replace NFTGO with Alchemy entry */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Image
-                      src="/nftgo_logo.svg"
-                      alt="NFTGO"
+                      src="/alchemy-mark-blue-gradient.svg"
+                      alt="Alchemy"
                       width={20}
                       height={20}
                       style={{ height: "auto" }}
                     />
-                    <span>NFTGO API</span>
+                    <span>Alchemy API</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    NFT Data • Floor Prices
+                    NFT Data • Portfolio Summary
                   </div>
                 </div>
               </div>
