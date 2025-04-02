@@ -6,7 +6,7 @@ import CurrencySelector from "@/components/CurrencySelector";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { containerClass } from "@/lib/utils";
 import { useState, FormEvent } from "react";
-import { Search, AlertCircle, Menu, X } from "lucide-react";
+import { Search, AlertCircle } from "lucide-react";
 import { isAddress } from "ethers";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -64,7 +64,7 @@ export default function Header({ user, activePage }: HeaderProps) {
             className="max-w-md w-full mx-4 relative hidden sm:flex items-center gap-2 lg:max-w-xs xl:max-w-md"
           >
             <div className="relative flex-grow">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
               <Input
                 type="text"
                 value={searchQuery}
@@ -74,7 +74,7 @@ export default function Header({ user, activePage }: HeaderProps) {
                     setValidationError(null);
                   }
                 }}
-                placeholder="Search ETH address or ENS name..."
+                placeholder="ETH address or ENS..."
                 className={`h-9 pl-9 pr-3 ${
                   validationError
                     ? "border-destructive focus-visible:ring-destructive/50"
@@ -85,9 +85,9 @@ export default function Header({ user, activePage }: HeaderProps) {
               {validationError && (
                 <div
                   className="absolute top-full mt-1.5 left-0 right-0 px-3 py-1.5 rounded-md
-                bg-destructive/95 text-destructive-foreground text-xs shadow-md animate-in fade-in
-                slide-in-from-top-1 duration-150 flex items-center gap-1.5
-                border border-destructive-foreground/20 z-10"
+                  bg-destructive/95 text-destructive-foreground text-xs shadow-md animate-in fade-in
+                  slide-in-from-top-1 duration-150 flex items-center gap-1.5
+                  border border-destructive-foreground/20 z-20"
                 >
                   <AlertCircle className="h-3.5 w-3.5 stroke-[2.5px]" />
                   <span>{validationError}</span>
@@ -98,7 +98,7 @@ export default function Header({ user, activePage }: HeaderProps) {
               type="submit"
               variant="secondary"
               size="sm"
-              className="flex-shrink-0 cursor-pointer"
+              className="flex-shrink-0 h-9 cursor-pointer"
               aria-label="Submit search"
             >
               Search
@@ -107,29 +107,38 @@ export default function Header({ user, activePage }: HeaderProps) {
 
           {/* Desktop navigation */}
           <div className="hidden sm:flex items-center gap-2">
-            <Button
-              variant={activePage === "overview" ? "default" : "ghost"}
-              size="sm"
+            <button
               onClick={() => router.push(`/overview?id=${user.ethAddress}`)}
+              className={`px-3.5 cursor-pointer py-1.5 rounded-md text-sm mr-2 font-medium transition-all ${
+                activePage === "overview"
+                  ? "bg-primary/90 text-primary-foreground shadow-sm"
+                  : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
+              }`}
             >
               Overview
-            </Button>
-            <Button
-              variant={activePage === "portfolio" ? "default" : "ghost"}
-              size="sm"
+            </button>
+            <button
               onClick={() => router.push(`/portfolio?id=${user.ethAddress}`)}
+              className={`px-3.5 cursor-pointer py-1.5 rounded-md text-sm mr-2 font-medium transition-all ${
+                activePage === "portfolio"
+                  ? "bg-primary/90 text-primary-foreground shadow-sm"
+                  : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
+              }`}
             >
               Portfolio
-            </Button>
-            <Button
-              variant={activePage === "activity" ? "default" : "ghost"}
-              size="sm"
+            </button>
+            <button
               onClick={() => router.push(`/activity?id=${user.ethAddress}`)}
+              className={`px-3.5 py-1.5 cursor-pointer rounded-md text-sm font-medium transition-all ${
+                activePage === "activity"
+                  ? "bg-primary/90 text-primary-foreground shadow-sm"
+                  : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
+              }`}
             >
               Activity
-            </Button>
+            </button>
 
-            <div className="flex items-center gap-1 pl-2 border-l border-border/40">
+            <div className="flex items-center gap-2 pl-2 border-l border-border/40">
               <CurrencySelector />
               <ThemeToggle />
             </div>
@@ -137,18 +146,44 @@ export default function Header({ user, activePage }: HeaderProps) {
 
           {/* Mobile menu button */}
           <div className="flex sm:hidden items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
+            <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-1.5 rounded-md text-sm font-medium bg-secondary/70 text-secondary-foreground"
               aria-label="Toggle mobile menu"
             >
               {mobileMenuOpen ? (
-                <X className="h-5 w-5" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M18 6 6 18"></path>
+                  <path d="m6 6 12 12"></path>
+                </svg>
               ) : (
-                <Menu className="h-5 w-5" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="4" x2="20" y1="12" y2="12"></line>
+                  <line x1="4" x2="20" y1="6" y2="6"></line>
+                  <line x1="4" x2="20" y1="18" y2="18"></line>
+                </svg>
               )}
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -156,13 +191,12 @@ export default function Header({ user, activePage }: HeaderProps) {
         {mobileMenuOpen && (
           <div className="sm:hidden py-3 border-t border-border/40 mt-2 animate-in slide-in-from-top duration-200">
             <div className="space-y-3">
-              {/* Mobile search */}
               <form
                 onSubmit={handleSearch}
                 className="relative flex items-center gap-2"
               >
                 <div className="relative flex-grow">
-                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
                   <Input
                     type="text"
                     value={searchQuery}
@@ -185,7 +219,7 @@ export default function Header({ user, activePage }: HeaderProps) {
                       className="absolute top-full mt-1.5 left-0 right-0 px-3 py-1.5 rounded-md
                       bg-destructive/95 text-destructive-foreground text-xs shadow-md animate-in fade-in
                       slide-in-from-top-1 duration-150 flex items-center gap-1.5
-                      border border-destructive-foreground/20 z-10"
+                      border border-destructive-foreground/20 z-20"
                     >
                       <AlertCircle className="h-3.5 w-3.5 stroke-[2.5px]" />
                       <span>{validationError}</span>
@@ -196,7 +230,7 @@ export default function Header({ user, activePage }: HeaderProps) {
                   type="submit"
                   variant="secondary"
                   size="sm"
-                  className="flex-shrink-0"
+                  className="flex-shrink-0 h-9 cursor-pointer"
                   aria-label="Submit search"
                 >
                   Search
@@ -204,41 +238,52 @@ export default function Header({ user, activePage }: HeaderProps) {
               </form>
 
               {/* Mobile navigation */}
-              <div className="flex flex-col space-y-1 pt-2">
-                <Button
-                  variant={activePage === "overview" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="w-full justify-start"
+              <div className="flex flex-col space-y-2 pt-2">
+                <button
                   onClick={() => {
                     router.push(`/overview?id=${user.ethAddress}`);
                     setMobileMenuOpen(false);
                   }}
+                  className={`px-3.5 py-2 rounded-md text-sm font-medium transition-all ${
+                    activePage === "overview"
+                      ? "bg-primary/90 text-primary-foreground shadow-sm"
+                      : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
+                  }`}
                 >
                   Overview
-                </Button>
-                <Button
-                  variant={activePage === "portfolio" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="w-full justify-start"
+                </button>
+                <button
                   onClick={() => {
                     router.push(`/portfolio?id=${user.ethAddress}`);
                     setMobileMenuOpen(false);
                   }}
+                  className={`px-3.5 py-2 rounded-md text-sm font-medium transition-all ${
+                    activePage === "portfolio"
+                      ? "bg-primary/90 text-primary-foreground shadow-sm"
+                      : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
+                  }`}
                 >
                   Portfolio
-                </Button>
-                <Button
-                  variant={activePage === "activity" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="w-full justify-start"
+                </button>
+                <button
                   onClick={() => {
                     router.push(`/activity?id=${user.ethAddress}`);
                     setMobileMenuOpen(false);
                   }}
+                  className={`px-3.5 py-2 rounded-md text-sm font-medium transition-all ${
+                    activePage === "activity"
+                      ? "bg-primary/90 text-primary-foreground shadow-sm"
+                      : "bg-secondary/70 text-secondary-foreground hover:bg-secondary/90"
+                  }`}
                 >
                   Activity
-                </Button>
-                <div className="flex items-center justify-between pt-2 border-t border-border/40">
+                </button>
+              </div>
+
+              {/* Mobile settings */}
+              <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                <span></span>
+                <div className="flex items-center gap-2">
                   <CurrencySelector />
                   <ThemeToggle />
                 </div>
