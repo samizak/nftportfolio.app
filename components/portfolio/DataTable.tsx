@@ -9,24 +9,10 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { format, parseISO } from "date-fns";
 import Image from "next/image";
-import {
-  Loader2,
-  PackageX,
-  ArrowUpDown,
-  ArrowDown,
-  ArrowUp,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2, PackageX } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { CollectionBreakdown } from "@/hooks/usePortfolioData";
 import { formatThousandSeparator } from "@/utils/formatters";
 
@@ -162,7 +148,7 @@ export function DataTable({
 
   const getSortIndicator = (key: CollectionSortKey) => {
     if (sortConfig.key !== key) return null;
-    return sortConfig.direction === "ascending" ? " ↑" : " ↓";
+    return sortConfig.direction === "ascending" ? " \u2191" : " \u2193";
   };
 
   return (
