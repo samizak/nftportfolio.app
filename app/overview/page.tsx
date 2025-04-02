@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -230,11 +231,13 @@ export default function OverviewPage({ user }: { user: any }) {
                         key={i}
                         className="flex items-center gap-4 pb-4 border-b last:border-0 last:pb-0"
                       >
-                        <div className="h-12 w-12 rounded-md bg-secondary/80 flex items-center justify-center">
-                          <img
+                        <div className="relative h-12 w-12 rounded-md bg-secondary/80 flex items-center justify-center overflow-hidden">
+                          <Image
                             src={`https://picsum.photos/seed/${i}/200/200`}
-                            alt="NFT"
-                            className="h-full w-full object-cover rounded-md"
+                            alt={`NFT ${i}`}
+                            fill
+                            sizes="48px"
+                            className="object-cover rounded-md"
                           />
                         </div>
                         <div className="flex-1">
@@ -275,11 +278,13 @@ export default function OverviewPage({ user }: { user: any }) {
                         key={i}
                         className="flex items-center gap-4 pb-4 border-b last:border-0 last:pb-0"
                       >
-                        <div className="h-12 w-12 rounded-md bg-secondary/80 flex items-center justify-center">
-                          <img
+                        <div className="relative h-12 w-12 rounded-md bg-secondary/80 flex items-center justify-center overflow-hidden">
+                          <Image
                             src={`https://picsum.photos/seed/${i + 10}/200/200`}
-                            alt="NFT"
-                            className="h-full w-full object-cover rounded-md"
+                            alt={`Top performer NFT ${i}`}
+                            fill
+                            sizes="48px"
+                            className="object-cover rounded-md"
                           />
                         </div>
                         <div className="flex-1">
@@ -312,11 +317,13 @@ export default function OverviewPage({ user }: { user: any }) {
                         key={i}
                         className="flex items-center gap-4 pb-4 border-b last:border-0 last:pb-0"
                       >
-                        <div className="h-12 w-12 rounded-md bg-secondary/80 flex items-center justify-center">
-                          <img
+                        <div className="relative h-12 w-12 rounded-md bg-secondary/80 flex items-center justify-center overflow-hidden">
+                          <Image
                             src={`https://picsum.photos/seed/${i + 20}/200/200`}
-                            alt="NFT"
-                            className="h-full w-full object-cover rounded-md"
+                            alt={`Underperformer NFT ${i}`}
+                            fill
+                            sizes="48px"
+                            className="object-cover rounded-md"
                           />
                         </div>
                         <div className="flex-1">
