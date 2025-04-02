@@ -1,8 +1,6 @@
 "use client";
 
 import { useFormattedEthPrice } from "@/hooks/useEthPriceQuery";
-import { formatCurrency } from "@/lib/utils";
-import { Currency } from "@/types/currency";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { containerClass } from "@/lib/utils";
 

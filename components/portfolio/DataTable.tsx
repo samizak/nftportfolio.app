@@ -130,7 +130,7 @@ export function DataTable({
               No Collections Found
             </p>
             <p className="text-sm text-muted-foreground">
-              This portfolio doesn't seem to hold NFTs in any collections.
+              This portfolio doesn&apos;t seem to hold NFTs in any collections.
             </p>
           </div>
         </div>

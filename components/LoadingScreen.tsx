@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { formatThousandSeparator } from "@/utils/formatters";
 
 interface LoadingScreenProps {
   status: string;

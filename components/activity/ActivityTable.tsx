@@ -8,11 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  formatEventDate,
-  getAccountName,
-  getEventBadgeColor,
-} from "@/lib/activityUtils";
+import { formatEventDate, getEventBadgeColor } from "@/lib/activityUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,

@@ -1,14 +1,7 @@
 import useSWR from "swr";
 
 // API base URL
-const API_BASE_URL = 'http://localhost:3001';
-
-// Updated fetcher function for SWR
-const fetcher = (url: string) => {
-  // Prepend API base URL if the URL is a relative path
-  const apiUrl = url.startsWith('/') ? `${API_BASE_URL}${url}` : url;
-  return fetch(apiUrl).then((res) => res.json());
-};
+const API_BASE_URL = "http://localhost:3001";
 
 // Custom hook for batch fetching collection data
 export function useBatchCollections(collections: string[]) {

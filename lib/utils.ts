@@ -27,7 +27,7 @@ export function formatCurrency(
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
-  } catch (error) {
+  } catch {
     // Fallback if the currency code is not supported
     return `${symbol}${amount.toFixed(2)}`;
   }
