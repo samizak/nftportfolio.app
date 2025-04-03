@@ -43,10 +43,10 @@ export default function CtaSection() {
               </div>
             </div>
             <p className="text-muted-foreground">
-              "nftportfolio.app has completely transformed how I manage my
+              &quot;nftportfolio.app has completely transformed how I manage my
               collection. The real-time analytics and price alerts have helped
               me make better decisions and increase my portfolio value by over
-              30% in just three months."
+              30% in just three months.&quot;
             </p>
             <div className="flex items-center">
               {[...Array(5)].map((_, i) => (

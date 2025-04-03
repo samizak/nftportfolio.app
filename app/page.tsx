@@ -1,16 +1,3 @@
-import Link from "next/link";
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import {
-  BarChart3,
-  Wallet,
-  TrendingUp,
-  Bell,
-  Shield,
-  Zap,
-  ArrowRight,
-  CheckCircle2,
-} from "lucide-react";
 import LandingHeader from "@/components/landing-page/LandingHeader";
 import HeroSection from "@/components/landing-page/HeroSection";
 import FeaturesSection from "@/components/landing-page/FeaturesSection";
