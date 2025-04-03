@@ -35,14 +35,14 @@ import { useUserData } from "@/hooks/useUserData";
 import { useSearchParams } from "next/navigation";
 import LenisScroller from "@/components/LenisScroller";
 
-// Mock data for the pie chart
+// Update colors in mock data
 const PORTFOLIO_DATA = [
-  { name: "Bored Ape Yacht Club", value: 45, color: "#8884d8" },
-  { name: "CryptoPunks", value: 20, color: "#82ca9d" },
-  { name: "Azuki", value: 15, color: "#ffc658" },
-  { name: "Doodles", value: 10, color: "#ff8042" },
-  { name: "CloneX", value: 5, color: "#0088fe" },
-  { name: "Others", value: 5, color: "#00C49F" },
+  { name: "Bored Ape Yacht Club", value: 45, color: "#a78bfa" }, // Purple
+  { name: "CryptoPunks", value: 20, color: "#4ade80" }, // Green
+  { name: "Azuki", value: 15, color: "#facc15" }, // Yellow
+  { name: "Doodles", value: 10, color: "#fb923c" }, // Orange
+  { name: "CloneX", value: 5, color: "#60a5fa" }, // Blue
+  { name: "Others", value: 5, color: "#2dd4bf" }, // Teal
 ];
 
 // Mock data for analytics
@@ -253,7 +253,9 @@ export default function OverviewPage() {
                   <CardContent className="pl-2">
                     <div className="h-80 w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
+                        <PieChart
+                          margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+                        >
                           <Pie
                             data={PORTFOLIO_DATA}
                             cx="50%"
@@ -276,7 +278,6 @@ export default function OverviewPage() {
                               "Value",
                             ]}
                           />
-                          <Legend />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
