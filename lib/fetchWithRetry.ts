@@ -1,5 +1,7 @@
-// Update the base URL for API requests
-const API_BASE_URL = "http://localhost:3001";
+import { API_CONFIG } from "./config"; // Import API_CONFIG
+
+// Remove hardcoded API_BASE_URL
+// const API_BASE_URL = "http://localhost:3001";
 
 export async function fetchWithRetry<T = unknown>(
   url: string,
@@ -7,10 +9,10 @@ export async function fetchWithRetry<T = unknown>(
   retries = 3,
   backoff = 300
 ): Promise<T | null> {
-  // Prepend API base URL if the URL is a relative path and doesn't already include the base URL
+  // Prepend API base URL from config if the URL is a relative path
   const apiUrl =
-    url.startsWith("/") && !url.startsWith(API_BASE_URL)
-      ? `${API_BASE_URL}${url}`
+    url.startsWith("/") && !url.startsWith(API_CONFIG.BASE_URL)
+      ? `${API_CONFIG.BASE_URL}${url}` // Use API_CONFIG.BASE_URL
       : url;
 
   // console.log(apiUrl);
