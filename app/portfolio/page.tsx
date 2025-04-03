@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { PortfolioClientWrapper } from "./PortfolioClientWrapper";
 import LoadingScreen from "@/components/LoadingScreen";
 import { Metadata } from "next/types";
+import LenisScroller from "@/components/LenisScroller";
 
 export const metadata: Metadata = {
   title: "NFT Portfolio | NFT Portfolio Tracker",
@@ -17,16 +18,10 @@ export default async function PortfolioPage({
   const id = params.id || "";
 
   return (
-    <Suspense
-      fallback={
-        <LoadingScreen
-          status="Loading portfolio data..."
-          count={0}
-          startTime={Date.now()}
-        />
-      }
-    >
-      <PortfolioClientWrapper id={id} />
+    <Suspense fallback={<LoadingScreen status="Loading portfolio data..." />}>
+      <LenisScroller>
+        <PortfolioClientWrapper id={id} />
+      </LenisScroller>
     </Suspense>
   );
 }

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { ActivityClientWrapper } from "./ActivityClientWrapper";
 import LoadingScreen from "@/components/LoadingScreen";
 import { Metadata } from "next/types";
+import LenisScroller from "@/components/LenisScroller";
 
 export const metadata: Metadata = {
   title: "NFT Activity | NFT Portfolio Tracker",
@@ -27,7 +28,9 @@ export default async function ActivityPage({
         />
       }
     >
-      <ActivityClientWrapper id={id} forceRefresh={forceRefresh} />
+      <LenisScroller>
+        <ActivityClientWrapper id={id} forceRefresh={forceRefresh} />
+      </LenisScroller>
     </Suspense>
   );
 }
