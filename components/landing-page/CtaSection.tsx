@@ -18,9 +18,8 @@ export default function CtaSection() {
               </p>
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
-              <Button size="lg">Get Started Free</Button>
-              <Button size="lg" variant="outline">
-                Schedule a Demo
+              <Button className="cursor-pointer" size="lg">
+                Get Started Free
               </Button>
             </div>
           </div>

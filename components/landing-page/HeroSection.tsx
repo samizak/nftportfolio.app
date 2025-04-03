@@ -18,11 +18,11 @@ export default function HeroSection() {
               </p>
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
-              <Button size="lg">
+              <Button className=" cursor-pointer" size="lg">
                 Start Tracking Free
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline">
+              <Button className=" cursor-pointer" size="lg" variant="outline">
                 View Demo
               </Button>
             </div>

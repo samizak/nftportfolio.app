@@ -100,7 +100,7 @@ export default function PricingSection() {
                 ))}
               </ul>
               <Button
-                className="mt-8 w-full"
+                className="mt-8 w-full cursor-pointer"
                 variant={tier.buttonVariant as any}
               >
                 {tier.buttonText}

@@ -44,7 +44,8 @@ export default function LandingHeader() {
           >
             Sign In
           </Link>
-          <Button>Get Started</Button> {/* TODO: Link this button */}
+          <Button className="cursor-pointer">Get Started</Button>{" "}
+          {/* TODO: Link this button */}
         </div>
       </div>
     </header>
