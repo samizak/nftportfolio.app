@@ -19,20 +19,23 @@ import PricingSection from "@/components/landing-page/PricingSection";
 import FaqSection from "@/components/landing-page/FaqSection";
 import CtaSection from "@/components/landing-page/CtaSection";
 import LandingFooter from "@/components/landing-page/LandingFooter";
+import LenisScroller from "@/components/LenisScroller";
 
 export default function LandingPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center">
-      <LandingHeader />
-      <main className="flex-1 w-full">
-        <HeroSection />
-        <FeaturesSection />
-        <HowItWorksSection />
-        <PricingSection />
-        <FaqSection />
-        <CtaSection />
-      </main>
-      <LandingFooter />
-    </div>
+    <LenisScroller>
+      <div className="flex min-h-screen flex-col items-center">
+        <LandingHeader />
+        <main className="flex-1 w-full">
+          <HeroSection />
+          <FeaturesSection />
+          <HowItWorksSection />
+          <PricingSection />
+          <FaqSection />
+          <CtaSection />
+        </main>
+        <LandingFooter />
+      </div>
+    </LenisScroller>
   );
 }
