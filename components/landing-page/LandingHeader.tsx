@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Wallet } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function LandingHeader() {
   return (
@@ -44,8 +45,8 @@ export default function LandingHeader() {
           >
             Sign In
           </Link>
-          <Button className="cursor-pointer">Get Started</Button>{" "}
-          {/* TODO: Link this button */}
+          <Button>Get Started</Button>
+          <ThemeToggle />
         </div>
       </div>
     </header>
