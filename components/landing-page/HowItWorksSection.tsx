@@ -50,7 +50,7 @@ export default function HowItWorksSection() {
         <div className="flex justify-center">
           <div className="relative w-full max-w-4xl overflow-hidden rounded-xl border">
             <Image
-              src="/placeholder.svg?height=800&width=1600" // TODO: Replace placeholder
+              src="/overview_preview.png" // TODO: Replace placeholder
               width={1600}
               height={800}
               alt="NFT Portfolio Dashboard"

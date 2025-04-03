@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import NftHeroGraphic from "@/components/graphics/NftHeroGraphic";
 
 export default function HeroSection() {
   return (
@@ -44,12 +45,11 @@ export default function HeroSection() {
           </div>
           <div className="flex items-center justify-center">
             <div className="relative w-full max-w-[500px] aspect-square overflow-hidden rounded-xl border bg-gradient-to-br from-muted/50 to-muted p-2">
-              <Image
-                src="/placeholder.svg?height=600&width=600" // TODO: Replace placeholder
-                width={600}
-                height={600}
-                alt="NFT Portfolio Dashboard Preview"
+              <NftHeroGraphic
+                width="100%"
+                height="100%"
                 className="rounded-lg object-cover"
+                aria-label="NFT Portfolio Dashboard Graphic"
               />
               <div className="absolute bottom-4 left-4 right-4 rounded-lg bg-background/80 backdrop-blur-sm p-4">
                 <div className="flex items-center justify-between">
