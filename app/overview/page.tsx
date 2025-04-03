@@ -28,6 +28,7 @@ import { useAddressResolver } from "@/hooks/useUserQuery";
 import { useUserData } from "@/hooks/useUserData";
 import { useSearchParams } from "next/navigation";
 import LenisScroller from "@/components/LenisScroller";
+import { Suspense } from "react";
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -107,6 +108,14 @@ const chartOptions = {
 };
 
 export default function OverviewPage() {
+  return (
+    <Suspense fallback={<div>Loading overview...</div>}>
+      <OverviewContent />
+    </Suspense>
+  );
+}
+
+function OverviewContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id") || "";
 

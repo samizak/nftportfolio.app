@@ -16,32 +16,38 @@ export function useFetchApi<T = any>(): UseFetchApiResult<T> {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async (url: string, options?: RequestInit): Promise<T | null> => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await fetchWithRetry(url, options);
-      
-      if (!response) {
-        throw new Error("No response received");
-      }
+  const fetchData = useCallback(
+    async (url: string, options?: RequestInit): Promise<T | null> => {
+      setLoading(true);
+      setError(null);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      try {
+        const response = await fetchWithRetry(url, options);
 
-      const jsonData = await response.json();
-      setData(jsonData);
-      return jsonData;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An error occurred";
-      setError(errorMessage);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        if (!response) {
+          throw new Error("No response received");
+        }
+
+        if (!(response as Response).ok) {
+          throw new Error(
+            `HTTP error! status: ${(response as Response).status}`
+          );
+        }
+
+        const jsonData = await (response as Response).json();
+        setData(jsonData);
+        return jsonData;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "An error occurred";
+        setError(errorMessage);
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   const reset = useCallback(() => {
     setData(null);
