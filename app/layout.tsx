@@ -42,7 +42,7 @@ export default function RootLayout({
           >
             <UserProvider>
               <CurrencyProvider>
-                <div className="min-h-screen overflow-x-hidden">{children}</div>
+                <div className="min-h-screen">{children}</div>
                 <Toaster position="top-right" />
               </CurrencyProvider>
             </UserProvider>

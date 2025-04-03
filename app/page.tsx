@@ -24,7 +24,7 @@ import LenisScroller from "@/components/LenisScroller";
 export default function LandingPage() {
   return (
     <LenisScroller>
-      <div className="flex min-h-screen flex-col items-center">
+      <div className="flex min-h-screen flex-col">
         <LandingHeader />
         <main className="flex-1 w-full">
           <HeroSection />
