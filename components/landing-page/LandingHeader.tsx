@@ -45,7 +45,11 @@ export default function LandingHeader() {
           >
             Sign In
           </Link>
-          <Button>Get Started</Button>
+          <Link href="/track">
+            <Button asChild>
+              <span>Get Started</span>
+            </Button>
+          </Link>
           <ThemeToggle />
         </div>
       </div>
