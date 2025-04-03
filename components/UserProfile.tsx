@@ -89,7 +89,11 @@ export default function UserProfile({ user }: UserProfileProps) {
             )}
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 ml-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 ml-1 cursor-pointer"
+                >
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
