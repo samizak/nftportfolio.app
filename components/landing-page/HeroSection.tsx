@@ -39,7 +39,7 @@ export default function HeroSection() {
               </div>
               <div className="flex items-center space-x-1">
                 <CheckCircle2 className="h-4 w-4 text-primary" />
-                <span>Track up to 100 NFTs free</span>
+                <span>Track 10,000s NFTs free</span>
               </div>
             </div>
           </div>
