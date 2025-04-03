@@ -24,6 +24,10 @@ Here's a glimpse of the core application pages:
 
 ![Activity Page Preview](public/activity_page.png)
 
+## 🌐 Live Demo
+
+Visit the live application at [nftportfolio-app.vercel.app](https://nftportfolio-app.vercel.app/)
+
 ## ✨ Features
 
 - **Portfolio Overview**: View all your NFTs in one place with real-time floor prices
