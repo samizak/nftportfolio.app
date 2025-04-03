@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle2, TrendingUp } from "lucide-react";
+import Link from "next/link";
 
 export default function HeroSection() {
   return (
@@ -18,10 +19,14 @@ export default function HeroSection() {
               </p>
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
-              <Button className=" cursor-pointer" size="lg">
-                Start Tracking Free
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              <Link href="/track">
+                <Button className=" cursor-pointer" size="lg" asChild>
+                  <span>
+                    Start Tracking Free
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </span>
+                </Button>
+              </Link>
               <Button className=" cursor-pointer" size="lg" variant="outline">
                 View Demo
               </Button>
