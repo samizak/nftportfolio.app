@@ -4,13 +4,7 @@ A comprehensive web application for tracking, analyzing, and visualizing your NF
 
 This project utilizes a dedicated backend service, available at: [`nft-backend-service`](https://github.com/samizak/nft-backend-service)
 
-## Portfolio Page
-
-![Portfolio Preview](public/portfolio-preview.png)
-
-## Activity Page
-
-![Activity Preview](public/activity-preview.png)
+![Portfolio Preview](public/landing_page.png)
 
 ## ✨ Features
 
