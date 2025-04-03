@@ -29,14 +29,14 @@ export function useUserProfile(id: string | null) {
         // Fetch ENS data
         const ensResponse = await fetchWithRetry(`/api/ens/resolve/${id}`);
         if (!ensResponse) return;
-        const ensJson = await ensResponse.json();
+        const ensJson = await (ensResponse as Response).json();
         setEnsData(ensJson);
 
         // Fetch user profile data
         try {
           const userResponse = await fetchWithRetry(`/api/user/profile/${id}`);
           if (!userResponse) return;
-          const userJson = await userResponse.json();
+          const userJson = await (userResponse as Response).json();
 
           if (userJson.error) {
             setUserData(createDefaultUserData(id, ensJson?.ens));
