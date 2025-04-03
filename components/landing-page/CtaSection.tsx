@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function CtaSection() {
   return (
@@ -18,9 +19,11 @@ export default function CtaSection() {
               </p>
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
-              <Button className="cursor-pointer" size="lg">
-                Get Started Free
-              </Button>
+              <Link href="/track">
+                <Button className="cursor-pointer" size="lg" asChild>
+                  <span>Get Started Free</span>
+                </Button>
+              </Link>
             </div>
           </div>
           <div className="flex flex-col space-y-4 rounded-lg border bg-background p-6">
