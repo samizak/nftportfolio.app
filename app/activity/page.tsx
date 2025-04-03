@@ -16,20 +16,11 @@ export default async function ActivityPage({
 }) {
   const params = await searchParams;
   const id = params.id || "";
-  const forceRefresh = params.refresh === "true" || false;
 
   return (
-    <Suspense
-      fallback={
-        <LoadingScreen
-          status="Loading activity data..."
-          count={0}
-          startTime={Date.now()}
-        />
-      }
-    >
+    <Suspense fallback={<LoadingScreen status="Loading activity data..." />}>
       <LenisScroller>
-        <ActivityClientWrapper id={id} forceRefresh={forceRefresh} />
+        <ActivityClientWrapper id={id} />
       </LenisScroller>
     </Suspense>
   );
