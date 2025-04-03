@@ -1,6 +1,7 @@
 import React from "react";
 
-interface NftHeroGraphicProps extends React.SVGProps<SVGSVGElement> {}
+// Change interface to type alias
+type NftHeroGraphicProps = React.SVGProps<SVGSVGElement>;
 
 const NftHeroGraphic: React.FC<NftHeroGraphicProps> = (props) => {
   return (
