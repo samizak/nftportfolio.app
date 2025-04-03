@@ -10,14 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-} from "recharts";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { Pie } from "react-chartjs-2";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -35,14 +29,17 @@ import { useUserData } from "@/hooks/useUserData";
 import { useSearchParams } from "next/navigation";
 import LenisScroller from "@/components/LenisScroller";
 
-// Update colors in mock data
+// Register Chart.js components
+ChartJS.register(ArcElement, Tooltip, Legend);
+
+// Keep updated colors in mock data
 const PORTFOLIO_DATA = [
   { name: "Bored Ape Yacht Club", value: 45, color: "#a78bfa" }, // Purple
   { name: "CryptoPunks", value: 20, color: "#4ade80" }, // Green
   { name: "Azuki", value: 15, color: "#facc15" }, // Yellow
   { name: "Doodles", value: 10, color: "#fb923c" }, // Orange
   { name: "CloneX", value: 5, color: "#60a5fa" }, // Blue
-  { name: "Others", value: 5, color: "#2dd4bf" }, // Teal
+  { name: "Others", value: 5, color: "#b14d4d" }, // Brown
 ];
 
 // Mock data for analytics
@@ -52,6 +49,61 @@ const ANALYTICS_DATA = {
   avgDuration: "34 days",
   profitLoss: 12.4,
   totalVolume: 156.8,
+};
+
+// Chart.js data preparation
+const chartData = {
+  labels: PORTFOLIO_DATA.map((item) => item.name),
+  datasets: [
+    {
+      label: "ETH Value",
+      data: PORTFOLIO_DATA.map((item) => item.value),
+      backgroundColor: PORTFOLIO_DATA.map((item) => item.color),
+      borderColor: PORTFOLIO_DATA.map((item) => item.color), // Or a border color like '#ffffff'
+      borderWidth: 1,
+      cutout: "60%",
+    },
+  ],
+};
+
+// Chart.js options
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false, // Important for custom height container
+  plugins: {
+    legend: {
+      position: "bottom" as const,
+      labels: {
+        padding: 20, // Add padding to legend items
+        boxWidth: 12,
+        usePointStyle: true,
+      },
+    },
+    tooltip: {
+      callbacks: {
+        label: function (context: any) {
+          let label = context.dataset.label || "";
+          if (label) {
+            label += ": ";
+          }
+          if (context.parsed !== null) {
+            label += `${context.parsed} ETH`;
+            const total = context.dataset.data.reduce(
+              (acc: number, val: number) => acc + val,
+              0
+            );
+            const percentage = ((context.parsed / total) * 100).toFixed(0);
+            label += ` (${percentage}%)`;
+          }
+          return label;
+        },
+      },
+    },
+    // Disable internal datalabels if desired (using chartjs-plugin-datalabels)
+    // datalabels: {
+    //   display: false,
+    // }
+  },
 };
 
 export default function OverviewPage() {
@@ -240,9 +292,8 @@ export default function OverviewPage() {
                 </TabsContent>
               </Tabs>
 
-              {/* Portfolio Allocation Section */}
+              {/* Portfolio Allocation Section - Updated with Chart.js */}
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-8">
-                {/* Pie Chart Card */}
                 <Card className="col-span-2">
                   <CardHeader>
                     <CardTitle>NFT Allocation</CardTitle>
@@ -251,35 +302,11 @@ export default function OverviewPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pl-2">
-                    <div className="h-80 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart
-                          margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-                        >
-                          <Pie
-                            data={PORTFOLIO_DATA}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={120}
-                            fill="#8884d8"
-                            dataKey="value"
-                            label={({ name, percent }: any) =>
-                              `${name} ${(percent * 100).toFixed(0)}%`
-                            }
-                          >
-                            {PORTFOLIO_DATA.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            formatter={(value: any) => [
-                              `${value} ETH`,
-                              "Value",
-                            ]}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
+                    {/* Replace Recharts with Chart.js Pie */}
+                    <div className="relative h-96 w-full">
+                      {" "}
+                      {/* Adjusted height for Chart.js */}
+                      <Pie data={chartData} options={chartOptions} />
                     </div>
                   </CardContent>
                 </Card>
